@@ -4,25 +4,12 @@ from tkinter.ttk import Treeview
 
 from pathlib import Path
 from os.path import abspath
-from ctypes import windll
+import ctypes   
 
-import re
+from lexer import Lexer
 
-windll.shcore.SetProcessDpiAwareness(1)
-
-class Token:
-    KEYWORD = "KEYWORD"
-    IDENTIFIER = "IDENTIFIER"
-    LITERAL = "LITERAL"
-
-    def __init__(self, lexeme, type):
-        self.lexeme = lexeme
-        self.type = type
-
-class Pattern:
-    KEYWORD = "^(HAI|KTHXBYE|WAZZUP|BUHBYE|BTW|OBTW|TLDR|I HAS A|ITZ|R|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY?|MEBBE|NO WAI|OIC|WTF?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)$"
-    IDENTIFIER = "^[_a-zA-Z][_a-zA-Z0-9]{0,}$"
-    LITERAL = "^[_a-zA-Z][_a-zA-Z0-9]{0,}$"
+# Improves blurry text
+ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 class LOLCodeInterpreter:
     def __init__(self):
@@ -80,10 +67,11 @@ class LOLCodeInterpreter:
         self.symbol_table.heading("value", text="Value")
         self.symbol_table.pack(fill="both", expand=True)
 
-        # EXECUTION
-        self.execute_btn = Button(self.frame, text="Execute")
+        # EXECUTE BUTTON
+        self.execute_btn = Button(self.frame, text="Execute", command=self.execute)
         self.execute_btn.grid(row=1, column=0, columnspan=3, sticky="ew", pady=pane_pad, padx=pane_pad)
 
+        # CONSOLE
         self.console = Text(self.frame, wrap="char", bg="#000000", fg="#ffffff")
         self.console.grid(row=2, column=0, columnspan=3, sticky="ews", padx=pane_pad, pady=pane_pad)
         
@@ -100,10 +88,11 @@ class LOLCodeInterpreter:
         data = file.read()
         self.editor.insert(Tk.END, data)
 
-    def lexer(self, code):
-        tokens = []
-        while code != "":
-            _identifier = re.match(Pattern.IDENTIFIER)
+    def execute(self):
+        code = self.editor.get("1.0", 'end-1c')
+        tokens = Lexer(code).tokenize()
+        for token in tokens:
+            self.lexeme_table.insert('', END, text=token.lexeme, values=(token.type))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()

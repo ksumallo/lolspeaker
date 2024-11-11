@@ -1,13 +1,5 @@
-import tkinter as Tk
-from tkinter import Frame, Button, Label, Text, Entry, filedialog, StringVar
-from tkinter.ttk import Treeview
-
-from os.path import abspath
-from ctypes import windll
-
+from io import TextIOWrapper
 import re
-
-windll.shcore.SetProcessDpiAwareness(1)
 
 class Token:
     KEYWORD = "KEYWORD"
@@ -46,12 +38,17 @@ class Pattern:
     type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING, Token.BOOL)
 
 class Lexer:
-    def __init__(self):
-        file = open("example.lol")
+    def __init__(self, input):
+        # Check if it is an opened file
+        # Otherwise, [input] is a plain string
+        if isinstance(input, TextIOWrapper):
+            _file = open("example.lol")
+            self.source_code = _file.read()
+        elif isinstance(input, str):
+            self.source_code = input
+        else: raise TypeError(f"Cannot accept {type(input)}. Input a string or a File.")
 
-        source_code = file.read()
         self._tokens = []
-        self._tokens.extend(self.lexer(source_code))
         
         print("INTERPRETATION DONE!")
         print("Tokens:", len(self._tokens))
@@ -59,21 +56,20 @@ class Lexer:
     def get_tokens(self):
         return self._tokens
 
-    def lexer(self, code):
+    def tokenize(self):
         tokens = []
-        while code:
+        while self.source_code:
             valid = False
             for pattern, token_type in zip(Pattern.priority, Pattern.type):
-                match = re.match(pattern, code)
+                match = re.match(pattern, self.source_code)
                 if match:
-                    print(f"{token_type}: {match}")
-                    tokens.append(Token(match, token_type))
-                    code = code[match.end():]
+                    match_str = self.source_code[:match.end()]
+                    print(f"{token_type}: {match_str}")
+                    tokens.append(Token(match_str, token_type))
+                    self.source_code = self.source_code[match.end():]
                     valid = True
                     break
             if valid: continue
 
-            raise ValueError(f"Unexpected character: \"{code[0]}\"")
+            raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
         return tokens
-
-Lexer()
