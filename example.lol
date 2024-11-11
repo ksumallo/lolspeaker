@@ -1,0 +1,16 @@
+BTW LOLCODE IS ME
+
+HAI -1.02
+BTW WAZZUP
+BTW Declare variables here 
+BTW Expressions HAS PREFIKS NOTATION 
+I HAS A ITZY ITZ 2
+I HAS A yarn ITZ "BRUHHH"
+I HAS A yarn ITZ WIN
+I HAS A sum ITZ SUM OF 5 AN 4
+OBTW Implement it variable TLDR
+VISIBLE num
+BTW BUHBYE 
+
+VISIBLE num
+KTHXBYE
