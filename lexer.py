@@ -12,6 +12,7 @@ class Token:
     COMMENT = "COMMENT"
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
+    CONCATENATION = "CONCATENATION"
 
     def __init__(self, lexeme, type=None):
         self.lexeme = lexeme
@@ -84,24 +85,26 @@ keyword_descriptions = {
     "I IZ": "Function call",
     "MKAY": "End of function call arguments",
     " ": "Whitespace",
+    "\t": "Whitespace",
     "\n": "Newline",
     "troof": "literal",
 
 }
 
 class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY|MEBBE|NO WAI|OIC|WTF|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)\b"
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     COMMENT = r"(OBTW\s+.*\s+TLDR|BTW [^\n]*)"
     FLOAT = r"\-?\d+\.\d+"
     INTEGER = r"\-?\d+"
     STRING = r"\"[^\n\"]*\""
     BOOL = r"\b(WIN|FAIL)\b"
-    NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
-    WHITESPACE = r" "
+    NEWLINE = r"(\n|\:\)|\.\.\.)"
+    WHITESPACE = r" |\t"
+    CONCATENATION = r"\+" # Is not supposed to exist on LOLCODE
 
-    priority = (COMMENT, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, FLOAT, INTEGER, STRING, BOOL)
-    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING, Token.BOOL)
+    priority = (COMMENT, WHITESPACE, NEWLINE, BOOL, KEYWORD, IDENTIFIER, FLOAT, INTEGER, STRING, CONCATENATION)
+    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.BOOL, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING, Token.CONCATENATION)
 
 class Lexer:
     def __init__(self, input):

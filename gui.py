@@ -87,15 +87,20 @@ class LOLCodeInterpreter:
         # Display the absolute file of the selected file
         self.file_picker_path.set(str(abspath(file.name)))
 
+        self.editor.delete('1.0', END)
         data = file.read()
         self.editor.insert(Tk.END, data)
 
     def execute(self):
+        for children in self.lexeme_table.get_children():
+            self.lexeme_table.delete(children)
+        for children in self.symbol_table.get_children():
+            self.symbol_table.delete(children)
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
         for token in tokens:
-            if token[2] is not "Whitespace" and token[2] is not "Newline": 
-                self.lexeme_table.insert('', END, text=token[0], values=(token[2]))
+            if token[2] != "Whitespace" and token[2] != "Newline": 
+                self.lexeme_table.insert('', END, text=token[0], values=(token[1]))
             else:
                 self.symbol_table.insert('', END, text=token[0], values=(token[2]))
 
