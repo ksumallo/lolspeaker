@@ -90,9 +90,9 @@ class LOLCodeInterpreter:
 
     def execute(self):
         code = self.editor.get("1.0", 'end-1c')
-        tokens = Lexer(code).tokenize()
+        tokens = Lexer(code).get_tokens()
         for token in tokens:
-            self.lexeme_table.insert('', END, text=token.lexeme, values=(token.type))
+            self.lexeme_table.insert('', END, text=token[0], values=(token[1]))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()
