@@ -1,6 +1,7 @@
 import tkinter as Tk
 from tkinter import Frame, Button, Label, Text, Entry, filedialog, StringVar, END
 from tkinter.ttk import Treeview
+import platform
 
 from pathlib import Path
 from os.path import abspath
@@ -8,8 +9,9 @@ import ctypes
 
 from lexer import Lexer
 
-# Improves blurry text
-ctypes.windll.shcore.SetProcessDpiAwareness(1)
+# Check if the OS is Windows before calling SetProcessDpiAwareness
+if platform.system() == "Windows":
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 class LOLCodeInterpreter:
     def __init__(self):
