@@ -94,8 +94,10 @@ class LOLCodeInterpreter:
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
         for token in tokens:
-            self.lexeme_table.insert('', END, text=token[0], values=(token[1]))
+            if token[2] is not "Whitespace" and token[2] is not "Newline": 
+                self.lexeme_table.insert('', END, text=token[0], values=(token[2]))
+            else:
+                self.symbol_table.insert('', END, text=token[0], values=(token[2]))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()
-

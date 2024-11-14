@@ -83,6 +83,10 @@ keyword_descriptions = {
     "FOUND YR": "Return value from function",
     "I IZ": "Function call",
     "MKAY": "End of function call arguments",
+    " ": "Whitespace",
+    "\n": "Newline",
+    "troof": "literal",
+
 }
 
 class Pattern:
