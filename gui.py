@@ -1,6 +1,7 @@
 import tkinter as Tk
 from tkinter import Frame, Button, Label, Text, Entry, filedialog, StringVar, END
 from tkinter.ttk import Treeview
+import platform
 
 from pathlib import Path
 from os.path import abspath
@@ -8,8 +9,9 @@ import ctypes
 
 from lexer import Lexer
 
-# Improves blurry text
-ctypes.windll.shcore.SetProcessDpiAwareness(1)
+# Check if the OS is Windows before calling SetProcessDpiAwareness
+if platform.system() == "Windows":
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
 class LOLCodeInterpreter:
     def __init__(self):
@@ -90,10 +92,12 @@ class LOLCodeInterpreter:
 
     def execute(self):
         code = self.editor.get("1.0", 'end-1c')
-        tokens = Lexer(code).tokenize()
+        tokens = Lexer(code).get_tokens()
         for token in tokens:
-            self.lexeme_table.insert('', END, text=token.lexeme, values=(token.type))
+            if token[2] is not "Whitespace" and token[2] is not "Newline": 
+                self.lexeme_table.insert('', END, text=token[0], values=(token[2]))
+            else:
+                self.symbol_table.insert('', END, text=token[0], values=(token[2]))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()
-
