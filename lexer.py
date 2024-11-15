@@ -4,10 +4,10 @@ import re
 class Token:
     KEYWORD = "KEYWORD"
     IDENTIFIER = "IDENTIFIER"
-    INTEGER = "INTEGER"
-    FLOAT = "FLOAT"
-    STRING = "STRING"
-    BOOL = "BOOL"
+    NUMBR = "NUMBR"
+    NUMBAR = "NUMBAR"
+    YARN = "YARN"
+    TROOF = "TROOF"
     OPERATOR = "OPERATOR"
     COMMENT = "COMMENT"
     NEWLINE = "NEWLINE"
@@ -45,7 +45,7 @@ keyword_descriptions = {
     "DIFF OF": "Subtraction operator",
     "PRODUKT OF": "Multiplication operator",
     "QUOSHUNT OF": "Division operator",
-    "MOD OF": "Modulus operator",
+    "MOD OF": "Modulo operator",
     "BIGGR OF": "Maximum of two values",
     "SMALLR OF": "Minimum of two values",
     "BOTH OF": "Logical AND",
@@ -89,15 +89,16 @@ class Pattern:
     KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY|MEBBE|NO WAI|OIC|WTF|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)\b"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     COMMENT = r"(OBTW\s+.*\s+TLDR|BTW [^\n]*)"
-    FLOAT = r"\-?\d+\.\d+"
-    INTEGER = r"\-?\d+"
-    STRING = r"\"[^\n\"]*\""
-    BOOL = r"\b(WIN|FAIL)\b"
+    NUMBAR = r"\-?\d+\.\d+"
+    NUMBR = r"\-?\d+"
+    YARN = r"\"[^\n\"]*\""
+    TROOF = r"\b(WIN|FAIL)\b"
     NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
     WHITESPACE = r" "
+    YARN_DELIMITER = r" "
 
-    priority = (COMMENT, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, FLOAT, INTEGER, STRING, BOOL)
-    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING, Token.BOOL)
+    priority = (COMMENT, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, NUMBAR, NUMBR, YARN, TROOF)
+    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.NUMBAR, Token.NUMBR, Token.YARN, Token.TROOF)
 
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"

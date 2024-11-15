@@ -3,7 +3,7 @@ from tkinter import Frame, Button, Label, Text, Entry, filedialog, StringVar, EN
 from tkinter.ttk import Treeview
 import platform
 
-from pathlib import Path
+from pathlib import Path    
 from os.path import abspath
 import ctypes   
 
