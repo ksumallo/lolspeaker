@@ -111,9 +111,9 @@ class LOLCodeInterpreter:
 
         for token in tokens:             
             if token.get_desc() not in ("Whitespace", "Newline"): 
-                self.lexeme_table.insert('', END , text=token.get_lexeme(), values=(token.get_type()))
+                self.lexeme_table.insert('', END , text=token.get_lexeme(), values=(token.get_desc(),))
             else:
-                self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc()))
+                self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()

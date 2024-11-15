@@ -9,9 +9,10 @@ class Token:
     YARN = "YARN"
     TROOF = "TROOF"
     OPERATOR = "OPERATOR"
-    COMMENT = "COMMENT"
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
+    COMMENT_SINGLE = "COMMENT_SINGLE"
+    COMMENT_MULTI = "COMMENT_MULTI"
 
     def __init__(self, lexeme, type=None, description="None"):
         self.lexeme = lexeme
@@ -31,13 +32,16 @@ class Token:
         return f"{self.get_type()}: {self.get_lexeme()} ({self.get_desc()})"
 
 # Dictionary for LOLCODE keyword descriptions
-keyword_descriptions = {
-    "NUMBR Literal": "Integer literal",
-    "NUMBAR Literal": "Floating-point literal",
-    "YARN Literal": "String literal",
-    "TROOF Literal": "Boolean literal (WIN/FAIL)",
+descriptions = {
+    Token.NUMBR: "Integer literal",
+    Token.NUMBAR: "Floating-point literal",
+    Token.YARN: "String literal",
+    Token.TROOF: "Boolean literal",
+    Token.IDENTIFIER: "Identifier",
+    Token.COMMENT_SINGLE: "Single-line comment",
+    Token.COMMENT_MULTI: "Multiline comment",
     "TYPE Literal": "Type identifier",
-    "<identifier>": "Variable or function name",
+    "<identifier>": "Variable, function, or loop name",
     "HAI": "Start of program",
     "KTHXBYE": "End of program",
     "WAZZUP": "Alternative start of program",
@@ -48,6 +52,7 @@ keyword_descriptions = {
     "I HAS A": "Variable declaration",
     "ITZ": "Initial value assignment",
     "R": "Assignment operator",
+    "AN": "Argument separator",
     "SUM OF": "Addition operator",
     "DIFF OF": "Subtraction operator",
     "PRODUKT OF": "Multiplication operator",
@@ -56,7 +61,7 @@ keyword_descriptions = {
     "BIGGR OF": "Maximum of two values",
     "SMALLR OF": "Minimum of two values",
     "BOTH OF": "Logical AND",
-    "EITHER OF": "Logical OR",
+    "EITHER OF": "Logical OR",  
     "WON OF": "Logical XOR",
     "NOT": "Logical NOT",
     "ANY OF": "Any operand is true",
@@ -93,13 +98,11 @@ keyword_descriptions = {
     " ": "Whitespace",
     "\t": "Whitespace",
     "\n": "Newline",
-    "troof": "literal",
 }
 
 class Pattern:
     KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
-    COMMENT = r"(OBTW\s+.*\s+TLDR|BTW [^\n]*)"
     NUMBAR = r"\-?\d+\.\d+"
     NUMBR = r"\-?\d+"
     YARN = r"\"[^\n\"]*\""
@@ -107,9 +110,11 @@ class Pattern:
     NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
     WHITESPACE = r" "
     YARN_DELIMITER = r" "
+    COMMENT_SINGLE = r"BTW [^\n]*"
+    COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
 
-    priority = (COMMENT, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, NUMBAR, NUMBR, YARN, TROOF)
-    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.NUMBAR, Token.NUMBR, Token.YARN, Token.TROOF)
+    priority = (COMMENT_MULTI, COMMENT_SINGLE, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, NUMBAR, NUMBR, YARN, TROOF)
+    type = (Token.COMMENT_MULTI, Token.COMMENT_SINGLE, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.NUMBAR, Token.NUMBR, Token.YARN, Token.TROOF)
 
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"
@@ -143,7 +148,7 @@ class Lexer:
                     match_str = self.source_code[:match.end()]
 
                     # Given a lexeme, find the appropriate description
-                    description = keyword_descriptions.get(match_str, "Unknown") 
+                    description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
                     # Add new token to token list
                     token = Token(match_str, token_type, description)
