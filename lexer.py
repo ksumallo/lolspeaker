@@ -12,7 +12,6 @@ class Token:
     COMMENT = "COMMENT"
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
-    CONCATENATION = "CONCATENATION"
 
     def __init__(self, lexeme, type=None):
         self.lexeme = lexeme
@@ -101,10 +100,9 @@ class Pattern:
     BOOL = r"\b(WIN|FAIL)\b"
     NEWLINE = r"(\n|\:\)|\.\.\.)"
     WHITESPACE = r" |\t"
-    CONCATENATION = r"\+" # Is not supposed to exist on LOLCODE
 
-    priority = (COMMENT, WHITESPACE, NEWLINE, BOOL, KEYWORD, IDENTIFIER, FLOAT, INTEGER, STRING, CONCATENATION)
-    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.BOOL, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING, Token.CONCATENATION)
+    priority = (COMMENT, WHITESPACE, NEWLINE, BOOL, KEYWORD, IDENTIFIER, FLOAT, INTEGER, STRING)
+    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.BOOL, Token.KEYWORD, Token.IDENTIFIER, Token.FLOAT, Token.INTEGER, Token.STRING)
 
 class Lexer:
     def __init__(self, input):
