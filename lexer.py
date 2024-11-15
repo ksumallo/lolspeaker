@@ -13,15 +13,22 @@ class Token:
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
 
-    def __init__(self, lexeme, type=None):
+    def __init__(self, lexeme, type=None, description="None"):
         self.lexeme = lexeme
         self.type = type
+        self.description = description
 
     def get_lexeme(self):
         return self.lexeme
     
     def get_type(self):
         return self.type
+
+    def get_desc(self):
+        return self.description
+    
+    def __str__(self):
+        return f"{self.get_type()}: {self.get_lexeme()} ({self.get_desc()})"
 
 # Dictionary for LOLCODE keyword descriptions
 keyword_descriptions = {
@@ -45,7 +52,7 @@ keyword_descriptions = {
     "DIFF OF": "Subtraction operator",
     "PRODUKT OF": "Multiplication operator",
     "QUOSHUNT OF": "Division operator",
-    "MOD OF": "Modulo operator",
+    "MOD OF": "Modulus operator",
     "BIGGR OF": "Maximum of two values",
     "SMALLR OF": "Minimum of two values",
     "BOTH OF": "Logical AND",
@@ -83,10 +90,14 @@ keyword_descriptions = {
     "FOUND YR": "Return value from function",
     "I IZ": "Function call",
     "MKAY": "End of function call arguments",
+    " ": "Whitespace",
+    "\t": "Whitespace",
+    "\n": "Newline",
+    "troof": "literal",
 }
 
 class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY|MEBBE|NO WAI|OIC|WTF|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)\b"
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     COMMENT = r"(OBTW\s+.*\s+TLDR|BTW [^\n]*)"
     NUMBAR = r"\-?\d+\.\d+"
@@ -102,7 +113,6 @@ class Pattern:
 
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"
-
     LITERAL = r"\b\.+\b"
 
 class Lexer:
@@ -123,23 +133,33 @@ class Lexer:
 
     def tokenize(self):
         tokens = []
+
+        # While there are strings to be read
         while self.source_code:
-            valid = False
             for pattern, token_type in zip(Pattern.priority, Pattern.type):
+                # Check if the current pattern has match
                 match = re.match(pattern, self.source_code)
                 if match:
                     match_str = self.source_code[:match.end()]
-                    token_formal = Token(match_str, token_type)
-                    tokens.append([token_formal.get_lexeme(), token_formal.get_type(), keyword_descriptions.get(token_formal.get_lexeme(), "Unknown")])  # Added description
-                    self.source_code = self.source_code[match.end():]
-                    valid = True
-                    break
-            if valid: continue
 
-            raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
-        print("INTERPRETATION DONE!") # Relocated at the bottom for console readability
+                    # Given a lexeme, find the appropriate description
+                    description = keyword_descriptions.get(match_str, "Unknown") 
+
+                    # Add new token to token list
+                    token = Token(match_str, token_type, description)
+                    tokens.append(token)  
+
+                    # Advance the cursor by the length of the lexeme
+                    self.source_code = self.source_code[match.end():]
+                    break
+            else: raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
+
+        print("(✓) Tokenization finished.") # Relocated at the bottom for console readability
         print("Tokens:", len(tokens))
         print(tokens)
+
+        # Print all tokens
         for token in tokens:
-            print(f"{token[1]}: {token[0]} - {token[2]}") 
+            print(token) 
+
         return tokens

@@ -110,10 +110,10 @@ class LOLCodeInterpreter:
         tokens = Lexer(code).get_tokens()
 
         for token in tokens:             
-            if token[2] != "Whitespace" and token[2] != "Newline": 
-                self.lexeme_table.insert('', END, text=token[0], values=(token[1]))
+            if token.get_desc() not in ("Whitespace", "Newline"): 
+                self.lexeme_table.insert('', END , text=token.get_lexeme(), values=(token.get_type()))
             else:
-                self.symbol_table.insert('', END, text=token[0], values=(token[2]))
+                self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc()))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()
