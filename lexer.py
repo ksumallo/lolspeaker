@@ -113,8 +113,19 @@ class Pattern:
     COMMENT_SINGLE = r"BTW [^\n]*"
     COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
 
-    priority = (COMMENT_MULTI, COMMENT_SINGLE, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, NUMBAR, NUMBR, YARN, TROOF)
-    type = (Token.COMMENT_MULTI, Token.COMMENT_SINGLE, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.NUMBAR, Token.NUMBR, Token.YARN, Token.TROOF)
+    # Higher to lower order of priority
+    priority = (
+        (COMMENT_MULTI, Token.COMMENT_MULTI),
+        (COMMENT_SINGLE, Token.COMMENT_SINGLE),
+        (WHITESPACE, Token.WHITESPACE),
+        (NEWLINE, Token.NEWLINE),
+        (KEYWORD, Token.KEYWORD),
+        (IDENTIFIER, Token.IDENTIFIER),
+        (NUMBAR, Token.NUMBAR),
+        (NUMBR, Token.NUMBR),
+        (YARN, Token.YARN),
+        (TROOF, Token.TROOF),
+    )
 
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"
@@ -141,7 +152,7 @@ class Lexer:
 
         # While there are strings to be read
         while self.source_code:
-            for pattern, token_type in zip(Pattern.priority, Pattern.type):
+            for pattern, token_type in Pattern.priority:
                 # Check if the current pattern has match
                 match = re.match(pattern, self.source_code)
                 if match:
