@@ -162,8 +162,9 @@ class Lexer:
                     description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
                     # Add new token to token list
-                    token = Token(match_str, token_type, description)
-                    tokens.append(token)  
+                    if token_type not in (Token.WHITESPACE, Token.NEWLINE):
+                        token = Token(match_str, token_type, description)
+                        tokens.append(token)  
 
                     # Advance the cursor by the length of the lexeme
                     self.source_code = self.source_code[match.end():]
