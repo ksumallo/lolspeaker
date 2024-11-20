@@ -11,10 +11,10 @@ from utils import Log
 Log.show(True)
 
 class Node:
-    def __init__(self, symbol=None):
+    def __init__(self, symbol=None, parent=None, children=[]):
         self.symbol = symbol
-        parent = None
-        self.children = []
+        self.parent = parent
+        self.children = children
         
     def add_child(self, node):
         self.children.append(node)
@@ -70,9 +70,7 @@ class Lexer:
 
             match = re.match(r"\s", self.expression)
             if match:
-                Log.i("Got space.")
-                # match_str = self.expression[:match.end()]
-                # tokens.append(Token(match_str, Token.OPERATOR))
+                # Matched whitespace
                 self.expression = self.expression[match.end():]
                 continue
 
@@ -91,6 +89,9 @@ class Parser:
             self.cursor += 1
 
     def current(self):
+        return self.tokens[self.cursor]
+    
+    def curr_node(self):
         return self.tokens[self.cursor]
     
     def accept(self, *token_types):
@@ -126,15 +127,16 @@ class Parser:
             match operation:
                 case "SUM OF":
                     result += accept
-
                 case "DIFF OF":
                     result -= accept
-
                 case "PRODUKT OF":
                     result *= accept
-
                 case "QUOSHUNT OF":
                     result /= accept
+                case "BIGGR OF":
+                    result = max(result, accept)
+                case "SMALLR OF":
+                    result = min(result, accept)
                 case _:
                     raise Exception(f"Operation {operation} not recognized")
                 
