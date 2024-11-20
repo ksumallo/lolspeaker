@@ -9,13 +9,15 @@ class Token:
     YARN = "YARN"
     TROOF = "TROOF"
     OPERATOR = "OPERATOR"
-    COMMENT = "COMMENT"
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
+    COMMENT_SINGLE = "COMMENT_SINGLE"
+    COMMENT_MULTI = "COMMENT_MULTI"
 
-    def __init__(self, lexeme, type=None):
+    def __init__(self, lexeme, type=None, description="None"):
         self.lexeme = lexeme
         self.type = type
+        self.description = description
 
     def get_lexeme(self):
         return self.lexeme
@@ -23,14 +25,23 @@ class Token:
     def get_type(self):
         return self.type
 
+    def get_desc(self):
+        return self.description
+    
+    def __str__(self):
+        return f"{self.get_type()}: {self.get_lexeme()} ({self.get_desc()})"
+
 # Dictionary for LOLCODE keyword descriptions
-keyword_descriptions = {
-    "NUMBR Literal": "Integer literal",
-    "NUMBAR Literal": "Floating-point literal",
-    "YARN Literal": "String literal",
-    "TROOF Literal": "Boolean literal (WIN/FAIL)",
+descriptions = {
+    Token.NUMBR: "Integer literal",
+    Token.NUMBAR: "Floating-point literal",
+    Token.YARN: "String literal",
+    Token.TROOF: "Boolean literal",
+    Token.IDENTIFIER: "Identifier",
+    Token.COMMENT_SINGLE: "Single-line comment",
+    Token.COMMENT_MULTI: "Multiline comment",
     "TYPE Literal": "Type identifier",
-    "<identifier>": "Variable or function name",
+    "<identifier>": "Variable, function, or loop name",
     "HAI": "Start of program",
     "KTHXBYE": "End of program",
     "WAZZUP": "Alternative start of program",
@@ -41,15 +52,16 @@ keyword_descriptions = {
     "I HAS A": "Variable declaration",
     "ITZ": "Initial value assignment",
     "R": "Assignment operator",
+    "AN": "Argument separator",
     "SUM OF": "Addition operator",
     "DIFF OF": "Subtraction operator",
     "PRODUKT OF": "Multiplication operator",
     "QUOSHUNT OF": "Division operator",
-    "MOD OF": "Modulo operator",
+    "MOD OF": "Modulus operator",
     "BIGGR OF": "Maximum of two values",
     "SMALLR OF": "Minimum of two values",
     "BOTH OF": "Logical AND",
-    "EITHER OF": "Logical OR",
+    "EITHER OF": "Logical OR",  
     "WON OF": "Logical XOR",
     "NOT": "Logical NOT",
     "ANY OF": "Any operand is true",
@@ -83,12 +95,14 @@ keyword_descriptions = {
     "FOUND YR": "Return value from function",
     "I IZ": "Function call",
     "MKAY": "End of function call arguments",
+    " ": "Whitespace",
+    "\t": "Whitespace",
+    "\n": "Newline",
 }
 
 class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY|MEBBE|NO WAI|OIC|WTF|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)\b"
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
-    COMMENT = r"(OBTW\s+.*\s+TLDR|BTW [^\n]*)"
     NUMBAR = r"\-?\d+\.\d+"
     NUMBR = r"\-?\d+"
     YARN = r"\"[^\n\"]*\""
@@ -96,13 +110,25 @@ class Pattern:
     NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
     WHITESPACE = r" "
     YARN_DELIMITER = r" "
+    COMMENT_SINGLE = r"BTW [^\n]*"
+    COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
 
-    priority = (COMMENT, WHITESPACE, NEWLINE, KEYWORD, IDENTIFIER, NUMBAR, NUMBR, YARN, TROOF)
-    type = (Token.COMMENT, Token.WHITESPACE, Token.NEWLINE, Token.KEYWORD, Token.IDENTIFIER, Token.NUMBAR, Token.NUMBR, Token.YARN, Token.TROOF)
+    # Higher to lower order of priority
+    priority = (
+        (COMMENT_MULTI, Token.COMMENT_MULTI),
+        (COMMENT_SINGLE, Token.COMMENT_SINGLE),
+        (WHITESPACE, Token.WHITESPACE),
+        (NEWLINE, Token.NEWLINE),
+        (KEYWORD, Token.KEYWORD),
+        (IDENTIFIER, Token.IDENTIFIER),
+        (NUMBAR, Token.NUMBAR),
+        (NUMBR, Token.NUMBR),
+        (YARN, Token.YARN),
+        (TROOF, Token.TROOF),
+    )
 
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"
-
     LITERAL = r"\b\.+\b"
 
 class Lexer:
@@ -123,23 +149,33 @@ class Lexer:
 
     def tokenize(self):
         tokens = []
+
+        # While there are strings to be read
         while self.source_code:
-            valid = False
-            for pattern, token_type in zip(Pattern.priority, Pattern.type):
+            for pattern, token_type in Pattern.priority:
+                # Check if the current pattern has match
                 match = re.match(pattern, self.source_code)
                 if match:
                     match_str = self.source_code[:match.end()]
-                    token_formal = Token(match_str, token_type)
-                    tokens.append([token_formal.get_lexeme(), token_formal.get_type(), keyword_descriptions.get(token_formal.get_lexeme(), "Unknown")])  # Added description
-                    self.source_code = self.source_code[match.end():]
-                    valid = True
-                    break
-            if valid: continue
 
-            raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
-        print("INTERPRETATION DONE!") # Relocated at the bottom for console readability
+                    # Given a lexeme, find the appropriate description
+                    description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
+
+                    # Add new token to token list
+                    token = Token(match_str, token_type, description)
+                    tokens.append(token)  
+
+                    # Advance the cursor by the length of the lexeme
+                    self.source_code = self.source_code[match.end():]
+                    break
+            else: raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
+
+        print("(✓) Tokenization finished.") # Relocated at the bottom for console readability
         print("Tokens:", len(tokens))
         print(tokens)
+
+        # Print all tokens
         for token in tokens:
-            print(f"{token[1]}: {token[0]} - {token[2]}") 
+            print(token) 
+
         return tokens
