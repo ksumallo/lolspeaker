@@ -1,10 +1,12 @@
 class Log:
-    PREFIX_DEBUG = "DEBUG"
-    PREFIX_INFO = "INFO"
-    PREFIX_WARN = "WARN"
-    PREFIX_ERROR = "ERROR"
+    PREFIX_DEBUG = "D"
+    PREFIX_INFO = "I"
+    PREFIX_YELL = "!"
+    PREFIX_WARN = "W"
+    PREFIX_ERROR = "E"
 
-    COLOR_DEBUG = '\033[32m'
+    COLOR_DEBUG = '\033[30m'
+    COLOR_YELL = '\033[32m'
     COLOR_INFO = '\033[34m'
     COLOR_WARN = '\033[33m'
     COLOR_ERROR = '\033[31m'
@@ -17,29 +19,41 @@ class Log:
         Log.show_logs = enable
 
     @staticmethod
-    def d(message: str):
+    def d(message: str, tag: str = "", end: str = "\n"):
         if Log.show_logs:
+            tag = f':{tag}' if tag else ''
             print(Log.COLOR_DEBUG, end='')
-            print(f"[{Log.PREFIX_DEBUG}]", message)
+            print(f"[{Log.PREFIX_DEBUG}{tag}]", message, end=end)
             print(Log.COLOR_CLEAR, end='')
 
     @staticmethod
-    def i(message: str):
+    def i(message: str, tag: str = ""):
         if Log.show_logs:
+            tag = f':{tag}' if tag else ''
             print(Log.COLOR_INFO, end='')
-            print(f"[{Log.PREFIX_INFO}]", message)
+            print(f"[{Log.PREFIX_INFO}{tag}]", message)
             print(Log.COLOR_CLEAR, end='')
 
     @staticmethod
-    def w(message: str):
+    def yell(message: str, tag: str = ""):
         if Log.show_logs:
+            tag = f':{tag}' if tag else ''
+            print(Log.COLOR_YELL, end='')
+            print(f"[{Log.PREFIX_YELL}{tag}]", message)
+            print(Log.COLOR_CLEAR, end='')
+
+    @staticmethod
+    def w(message: str, tag: str = ""):
+        if Log.show_logs:
+            tag = f':{tag}' if tag else ''
             print(Log.COLOR_WARN, end='')
-            print(f"[{Log.PREFIX_WARN}]", message)
+            print(f"[{Log.PREFIX_WARN}]{tag}", message)
             print(Log.COLOR_CLEAR, end='')
 
     @staticmethod
-    def e(message: str):
+    def e(message: str, tag: str = ""):
         if Log.show_logs:
+            tag = f':{tag}' if tag else ''
             print(Log.COLOR_ERROR, end='')
-            print(f"[{Log.PREFIX_ERROR}]", message)
+            print(f"[{Log.PREFIX_ERROR}{tag}]", message)
             print(Log.COLOR_CLEAR, end='')
