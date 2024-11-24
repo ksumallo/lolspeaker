@@ -109,7 +109,7 @@ class Pattern:
     TROOF = r"\b(WIN|FAIL)\b"
     NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
     WHITESPACE = r" "
-    YARN_DELIMITER = r" "
+    YARN_DELIMITER = r"\""
     COMMENT_SINGLE = r"BTW [^\n]*"
     COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
 
@@ -120,11 +120,11 @@ class Pattern:
         (WHITESPACE, Token.WHITESPACE),
         (NEWLINE, Token.NEWLINE),
         (KEYWORD, Token.KEYWORD),
+        (TROOF, Token.TROOF),
         (IDENTIFIER, Token.IDENTIFIER),
         (NUMBAR, Token.NUMBAR),
         (NUMBR, Token.NUMBR),
         (YARN, Token.YARN),
-        (TROOF, Token.TROOF),
     )
 
 class Classification:
@@ -136,7 +136,7 @@ class Lexer:
         # Check if it is an opened file
         # Otherwise, [input] is a plain string
         if isinstance(input, TextIOWrapper):
-            _file = open("example.lol")
+            _file = open("sample.lol")
             self.source_code = _file.read()
         elif isinstance(input, str):
             self.source_code = input
@@ -162,8 +162,9 @@ class Lexer:
                     description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
                     # Add new token to token list
-                    token = Token(match_str, token_type, description)
-                    tokens.append(token)  
+                    if token_type not in (Token.WHITESPACE, Token.NEWLINE):
+                        token = Token(match_str, token_type, description)
+                        tokens.append(token)  
 
                     # Advance the cursor by the length of the lexeme
                     self.source_code = self.source_code[match.end():]
