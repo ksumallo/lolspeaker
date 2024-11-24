@@ -1,6 +1,19 @@
 from io import TextIOWrapper
 import re
 
+class Pattern:
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
+    IDENTIFIER = r"\b[a-zA-Z]\w*\b"
+    NUMBAR = r"\-?\d+\.\d+"
+    NUMBR = r"\-?\d+"
+    YARN = r"\"[^\n\"]*\""
+    TROOF = r"\b(WIN|FAIL)\b"
+    NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
+    WHITESPACE = r" "
+    YARN_DELIMITER = r"\""
+    COMMENT_SINGLE = r"BTW [^\n]*"
+    COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
+
 class Token:
     KEYWORD = "KEYWORD"
     IDENTIFIER = "IDENTIFIER"
@@ -13,6 +26,22 @@ class Token:
     WHITESPACE = "WHITESPACE"
     COMMENT_SINGLE = "COMMENT_SINGLE"
     COMMENT_MULTI = "COMMENT_MULTI"
+
+    # Higher to lower order of precedence
+    precedence = (
+        (Pattern.COMMENT_MULTI, COMMENT_MULTI),
+        (Pattern.COMMENT_SINGLE, COMMENT_SINGLE),
+        (Pattern.WHITESPACE, WHITESPACE),
+        (Pattern.NEWLINE, NEWLINE),
+        (Pattern.KEYWORD, KEYWORD),
+        (Pattern.TROOF, TROOF),
+        (Pattern.IDENTIFIER, IDENTIFIER),
+        (Pattern.NUMBAR, NUMBAR),
+        (Pattern.NUMBR, NUMBR),
+        (Pattern.YARN, YARN),
+    )
+
+    ignore = (WHITESPACE, NEWLINE, COMMENT_SINGLE, COMMENT_MULTI)
 
     def __init__(self, lexeme, type=None, description="None"):
         self.lexeme = lexeme
@@ -100,33 +129,6 @@ descriptions = {
     "\n": "Newline",
 }
 
-class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
-    IDENTIFIER = r"\b[a-zA-Z]\w*\b"
-    NUMBAR = r"\-?\d+\.\d+"
-    NUMBR = r"\-?\d+"
-    YARN = r"\"[^\n\"]*\""
-    TROOF = r"\b(WIN|FAIL)\b"
-    NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
-    WHITESPACE = r" "
-    YARN_DELIMITER = r"\""
-    COMMENT_SINGLE = r"BTW [^\n]*"
-    COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
-
-    # Higher to lower order of priority
-    priority = (
-        (COMMENT_MULTI, Token.COMMENT_MULTI),
-        (COMMENT_SINGLE, Token.COMMENT_SINGLE),
-        (WHITESPACE, Token.WHITESPACE),
-        (NEWLINE, Token.NEWLINE),
-        (KEYWORD, Token.KEYWORD),
-        (TROOF, Token.TROOF),
-        (IDENTIFIER, Token.IDENTIFIER),
-        (NUMBAR, Token.NUMBAR),
-        (NUMBR, Token.NUMBR),
-        (YARN, Token.YARN),
-    )
-
 class Classification:
     DELIMITER = r"\b(HAI|KTHXBYE)\b"
     LITERAL = r"\b\.+\b"
@@ -136,8 +138,7 @@ class Lexer:
         # Check if it is an opened file
         # Otherwise, [input] is a plain string
         if isinstance(input, TextIOWrapper):
-            _file = open("sample.lol")
-            self.source_code = _file.read()
+            self.source_code = input.read()
         elif isinstance(input, str):
             self.source_code = input
         else: raise TypeError(f"Cannot accept {type(input)}. Input a string or a File.")
@@ -152,7 +153,7 @@ class Lexer:
 
         # While there are strings to be read
         while self.source_code:
-            for pattern, token_type in Pattern.priority:
+            for pattern, token_type in Token.precedence:
                 # Check if the current pattern has match
                 match = re.match(pattern, self.source_code)
                 if match:
@@ -162,7 +163,7 @@ class Lexer:
                     description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
                     # Add new token to token list
-                    if token_type not in (Token.WHITESPACE, Token.NEWLINE):
+                    if token_type not in Token.ignore:
                         token = Token(match_str, token_type, description)
                         tokens.append(token)  
 
