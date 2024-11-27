@@ -177,10 +177,11 @@ class Lexer:
 
         print("(✓) Tokenization finished.") # Relocated at the bottom for console readability
         print("Tokens:", len(tokens))
-        print(tokens)
+        # print(tokens)
 
         # Print all tokens
-        for token in tokens:
-            print(token) 
+        
+        # for token in tokens:
+        #     print(token) 
 
         return tokens

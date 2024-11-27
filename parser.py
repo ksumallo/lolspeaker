@@ -26,7 +26,7 @@ class Parser:
 
         if self.cursor < len(self.tokens):
             self.current = self.tokens[self.cursor]
-        else: raise Exception("Token overflow!")
+        else: Log.e("Token overflow!")
 
     # def current(self):
     #     return self.tokens[self.cursor]
@@ -88,36 +88,50 @@ class Parser:
         # EVERYTHING HAPPENS HERE
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             self.statement()
-            self.next()
 
         return True
 
     def expr(self):
         if self.expect(Token.OPERATOR, required=False, consume=False):
             operation = self.current.lexeme
-            print(operation, end=" ")
 
             self.next()
             op1 = self.expr()
             if op1 == None:
                 raise Exception(f"Expected: <expression>, got {self.current.lexeme}")
-            
+        
             match (operation):
                 case "NOT":
                     return not bool(op1)
                 case "ANY OF" | "ALL OF":
-                    operands = []
+                    operands = [op1]
                     
-                    while self.expect(Token.KEYWORD, lexeme="AN", consume=False, required=False):
-                        self.next()
+                    while self.expect(Token.KEYWORD, lexeme="AN", required=False):
                         op = self.expr()
+
                         if op == None:
                             raise Exception("Expected: bool or expression")
                         operands.append(op)
-                    result = all(operands) if operation == "ALL OF" else any(operands)
 
+                    result = all(operands) if operation == "ALL OF" else any(operands)
                     return result
+                
+                case "SMOOSH":
+                    operands = []
                     
+                    if op1 != None:
+                        operands.append(op1)
+                    else: raise Exception("Expected: literal or <expr>")
+                    
+                    while self.expect(Token.KEYWORD, lexeme="AN", consume=True, required=False):
+                        value = self.expr()
+
+                        if value == None: break
+                        # Log.d(f"To concat: {self.current.type}") # DEBUG
+                        operands.append(value)
+
+                    return "".join(operands)
+            
             self.expect(Token.KEYWORD, lexeme="AN")
 
             op2 = self.expr()
@@ -159,13 +173,17 @@ class Parser:
             self.next()
             return got 
         
+        if self.expect(Token.YARN, consume=False, required=False):
+            got = self.current.lexeme[1:-1]
+            self.next()
+            return got 
+        
         if self.expect(Token.TROOF, consume=False, required=False):
-            Log.i(f"Got boolean: {self.current.lexeme}")
-            got = self.current.lexeme 
+            got = self.current.lexeme
             self.next()
             return got == "WIN"
         
-        raise Exception("Encountered invalid symbol in expression")
+        raise Exception(f"Encountered invalid symbol in expression: {self.current.lexeme}")
 
     def statement(self):
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
@@ -175,27 +193,23 @@ class Parser:
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
             if not self.print():
-                raise Exception("Error occurred while executing VISIBLE")\
-        
-        if self.expect(Token.KEYWORD, lexeme="SMOOSH", required=False):
-            if not self.concat():
-                raise Exception("Error occurred while executing CONCAT")
+                raise Exception("Error occurred while executing VISIBLE")
             
         # Create a branch for every statement ↓↓↓
 
         return True
 
     def print(self):
-        if not self.expect(Token.YARN, Token.OPERATOR, Token.NUMBAR, Token.NUMBR, Token.TROOF, consume=False):
+        value = self.expr()
+        if value == None:
             raise Exception(f"Expected literal or <expr>, got {self.current.lexeme}")
         
-        Log.d(f"To print: {self.current.type}")
-        value = self.current.lexeme if self.current.type == Token.YARN else self.expr()
+        # Log.d(f"To print: {value} ({self.current.type})") # DEBUG
 
         if isinstance(value, bool):
             print("WIN" if value else "FAIL") 
-        else: print(value)
-        Log.d(f"Printed {value}")
+        else: 
+            print(value)
 
         return True
     
