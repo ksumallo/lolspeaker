@@ -1,4 +1,4 @@
-from lexer import Lexer
+from lexer import Lexer, Token
 from utils import Log
 
 Log.show(True)
@@ -11,27 +11,6 @@ class Node:
         
     def add_child(self, node):
         self.children.append(node)
-
-class Token:
-    KEYWORD = "KEYWORD"
-    IDENTIFIER = "IDENTIFIER"
-    NUMBR = "NUMBR"
-    NUMBAR = "NUMBAR"
-    YARN = "YARN"
-    TROOF = "TROOF"
-    OPERATOR = "OPERATOR"
-    NEWLINE = "NEWLINE"
-    WHITESPACE = "WHITESPACE"
-    COMMENT_SINGLE = "COMMENT_SINGLE"
-    COMMENT_MULTI = "COMMENT_MULTI"
-
-    def __init__(self, lexeme, type=None, description="None"):
-        self.lexeme = lexeme
-        self.type = type
-        self.description = description
-
-    def __str__(self):
-        return f"{self.type}: {self.lexeme}"
 
 class Parser:
     def __init__(self, tokens):
@@ -79,16 +58,16 @@ class Parser:
         True if expectation was met, otherwise False
     =---------------------------------------------------------------------------'''
     def expect(self, *token_types, lexeme=None, consume=True, required=True):
+        if lexeme != None and self.current.lexeme != lexeme:
+            if required:
+                raise Exception(f"Expected {self.current.lexeme}, got {lexeme}")
+            else: return None
+
         if self.current.type not in token_types:
             if required:
                 raise Exception(f"Expected {token_types}, got {self.current.type}")
             else: return None
-        
-        if lexeme and self.current.lexeme != lexeme:
-            if required:
-                raise Exception(f"Expected {self.current.lexeme}, got {lexeme}")
-            else: return None
-        
+    
         if consume: 
             self.next()
 
@@ -114,16 +93,30 @@ class Parser:
         return True
 
     def expr(self):
-        if self.expect(Token.KEYWORD, required=False, consume=False):
+        if self.expect(Token.OPERATOR, required=False, consume=False):
             operation = self.current.lexeme
+            print(operation, end=" ")
 
             self.next()
             op1 = self.expr()
-            if not op1:
-                raise Exception("Expected: <expression>")
+            if op1 == None:
+                raise Exception(f"Expected: <expression>, got {self.current.lexeme}")
+            
+            match (operation):
+                case "NOT":
+                    return not bool(op1)
+                case "ANY OF" | "ALL OF":
+                    operands = []
+                    
+                    while self.expect(Token.KEYWORD, lexeme="AN", consume=False, required=False):
+                        self.next()
+                        op = self.expr()
+                        if op == None:
+                            raise Exception("Expected: bool or expression")
+                        operands.append(op)
+                    result = all(operands) if operation == "ALL OF" else any(operands)
 
-            if operation == "NOT":
-                return not bool(op1)
+                    return result
                     
             self.expect(Token.KEYWORD, lexeme="AN")
 
@@ -168,8 +161,9 @@ class Parser:
         
         if self.expect(Token.TROOF, consume=False, required=False):
             Log.i(f"Got boolean: {self.current.lexeme}")
+            got = self.current.lexeme 
             self.next()
-            return self.current.lexeme == "WIN"
+            return got == "WIN"
         
         raise Exception("Encountered invalid symbol in expression")
 
@@ -181,14 +175,18 @@ class Parser:
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
             if not self.print():
-                raise Exception("Error occurred while executing VISIBLE")
+                raise Exception("Error occurred while executing VISIBLE")\
+        
+        if self.expect(Token.KEYWORD, lexeme="SMOOSH", required=False):
+            if not self.concat():
+                raise Exception("Error occurred while executing CONCAT")
             
         # Create a branch for every statement ↓↓↓
 
         return True
 
     def print(self):
-        if not self.expect(Token.YARN, Token.KEYWORD, Token.NUMBAR, Token.NUMBR, Token.TROOF, consume=False):
+        if not self.expect(Token.YARN, Token.OPERATOR, Token.NUMBAR, Token.NUMBR, Token.TROOF, consume=False):
             raise Exception(f"Expected literal or <expr>, got {self.current.lexeme}")
         
         Log.d(f"To print: {self.current.type}")
@@ -202,7 +200,7 @@ class Parser:
         return True
     
 # MAIN
-tokens = Lexer(open("sample.lol", "r")).get_tokens()
+tokens = Lexer(open("project-testcases/test_2.lol", "r")).get_tokens()
 
 parser = Parser(tokens)
 result = parser.program()

@@ -2,7 +2,9 @@ from io import TextIOWrapper
 import re
 
 class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
+    OPERATOR = r"\b(SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH)"
+    
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     NUMBAR = r"\-?\d+\.\d+"
     NUMBR = r"\-?\d+"
@@ -17,11 +19,11 @@ class Pattern:
 class Token:
     KEYWORD = "KEYWORD"
     IDENTIFIER = "IDENTIFIER"
+    OPERATOR = "OPERATOR"
     NUMBR = "NUMBR"
     NUMBAR = "NUMBAR"
     YARN = "YARN"
     TROOF = "TROOF"
-    OPERATOR = "OPERATOR"
     NEWLINE = "NEWLINE"
     WHITESPACE = "WHITESPACE"
     COMMENT_SINGLE = "COMMENT_SINGLE"
@@ -33,6 +35,7 @@ class Token:
         (Pattern.COMMENT_SINGLE, COMMENT_SINGLE),
         (Pattern.WHITESPACE, WHITESPACE),
         (Pattern.NEWLINE, NEWLINE),
+        (Pattern.OPERATOR, OPERATOR),
         (Pattern.KEYWORD, KEYWORD),
         (Pattern.TROOF, TROOF),
         (Pattern.IDENTIFIER, IDENTIFIER),
@@ -58,7 +61,7 @@ class Token:
         return self.description
     
     def __str__(self):
-        return f"{self.get_type()}: {self.get_lexeme()} ({self.get_desc()})"
+        return f"{self.type}: {self.lexeme}"
 
 # Dictionary for LOLCODE keyword descriptions
 descriptions = {

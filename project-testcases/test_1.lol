@@ -25,7 +25,7 @@ IM OUTTA YR loop
 I HAS A troof  
 troof R BOTH SAEM 10 AN BIGGR OF 10 AN 5
 
-O RLY
+O RLY?
     YA RLY  
         VISIBLE "10 iz BIGGER THAN 5!"  
     NO WAI  
