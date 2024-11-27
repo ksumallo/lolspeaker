@@ -1,16 +1,10 @@
 from lexer import Lexer, Token
 from utils import Log
+from syntax_tree import AST, Node
 
 Log.show(True)
 
-class Node:
-    def __init__(self, symbol=None, parent=None, children=[]):
-        self.symbol = symbol
-        self.parent = parent
-        self.children = children
-        
-    def add_child(self, node):
-        self.children.append(node)
+ast = AST()
 
 class Parser:
     def __init__(self, tokens):
@@ -73,6 +67,15 @@ class Parser:
 
         return lexeme if lexeme else True
     
+    # Used for expecting abstractions
+    def accept(self, abstraction, err_msg="Unexpected non-terminal!"):
+        _accept = abstraction()
+        if _accept == None:
+            Log.e(err_msg)
+            raise Exception(err_msg)
+        
+        return _accept
+    
     '''----------------------------# 
     In recursive descent, each function represents a non-terminal symbol in the grammar.
     The expansion/s of each non-terminal symbol is handled inside the functions.
@@ -96,9 +99,7 @@ class Parser:
             operation = self.current.lexeme
 
             self.next()
-            op1 = self.expr()
-            if op1 == None:
-                raise Exception(f"Expected: <expression>, got {self.current.lexeme}")
+            op1 = self.accept(self.expr, f"Expected: <expression>, got {self.current.lexeme}")
         
             match (operation):
                 case "NOT":
@@ -107,36 +108,25 @@ class Parser:
                     operands = [op1]
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", required=False):
-                        op = self.expr()
-
-                        if op == None:
-                            raise Exception("Expected: bool or expression")
+                        op = self.accept(self.expr, f"Expected: bool or expression")
                         operands.append(op)
 
                     result = all(operands) if operation == "ALL OF" else any(operands)
                     return result
                 
                 case "SMOOSH":
-                    operands = []
-                    
-                    if op1 != None:
-                        operands.append(op1)
-                    else: raise Exception("Expected: literal or <expr>")
+                    operands = [op1]
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", consume=True, required=False):
-                        value = self.expr()
+                        value = self.accept(self.expr)
 
                         if value == None: break
-                        # Log.d(f"To concat: {self.current.type}") # DEBUG
                         operands.append(value)
 
                     return "".join(operands)
             
             self.expect(Token.KEYWORD, lexeme="AN")
-
-            op2 = self.expr()
-            if not op2:
-                raise Exception("Expected: <expression>")
+            op2 = self.accept(self.expr)
             
             match operation:
                 # Arithmetic
@@ -183,6 +173,7 @@ class Parser:
             self.next()
             return got == "WIN"
         
+        return None
         raise Exception(f"Encountered invalid symbol in expression: {self.current.lexeme}")
 
     def statement(self):
@@ -192,17 +183,15 @@ class Parser:
             #     raise Exception("Error occurred during declaration")
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
-            if not self.print():
-                raise Exception("Error occurred while executing VISIBLE")
+            success = self.accept(self.print, f"Error occurred while executing VISIBLE")
+            return success
             
         # Create a branch for every statement ↓↓↓
 
         return True
 
     def print(self):
-        value = self.expr()
-        if value == None:
-            raise Exception(f"Expected literal or <expr>, got {self.current.lexeme}")
+        value = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         
         # Log.d(f"To print: {value} ({self.current.type})") # DEBUG
 
