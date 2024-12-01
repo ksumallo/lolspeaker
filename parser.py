@@ -1,63 +1,50 @@
 from lexer import Lexer, Token
 from utils import Log
+# from syntax_tree import AST, Node
 
 Log.show(True)
-
-class Node:
-    def __init__(self, symbol=None, parent=None, children=[]):
-        self.symbol = symbol
-        self.parent = parent
-        self.children = children
-        
-    def add_child(self, node):
-        self.children.append(node)
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.cursor = 0
-        self.root = Node()  # Root node of the AST
+        # self.ast = AST()  # Root node of the AST
         self.current = self.tokens[self.cursor]
 
-    # Move to the next token
-    # - increments the cursor by 1
     def next(self):
+        """
+        Moves to the next token by incrementing the cursor by 1
+        """
         self.cursor += 1
 
         if self.cursor < len(self.tokens):
             self.current = self.tokens[self.cursor]
         else: raise Exception("Token overflow!")
-
-    # def current(self):
-    #     return self.tokens[self.cursor]
     
     def curr_node(self):
         return self.tokens[self.cursor]
-    
-    # def accept(self, *token_types, lexeme=None):
-    #     if self.current.type not in token_types:
-    #         return False
-        
-    #     return not lexeme or self.current.lexeme == lexeme
 
-    '''-------------------------------------------------------------------------= 
-    Checks whether the token at the cursor:
-      - has the specified lexeme
-      - are specific type/s of tokens
-    @ Parameters
-      - *token_types [str] = specify "any number" of Token types to expect
-      - lexeme [str] = specify a specific lexeme to expect in the current token
-      - consume [bool] = determines whether to move to next token if
-                expectation was satisfied
-      - required [bool] = determines whether an error should be raised if
-                expectation was satisfied
-    @ Usage
-        self.expect(Token.KEYWORD, "HAI") → The current token needs to specifically be a "HAI" keyword
-        self.expect(Token.NUMBAR) → The current token has to be a NUMBAR literal
-    @ Return
-        True if expectation was met, otherwise False
-    =---------------------------------------------------------------------------'''
     def expect(self, *token_types, lexeme=None, consume=True, required=True):
+        """
+        Checks whether the token at the cursor:
+        1. has the specified lexeme, or
+        2. are specific type/s of tokens
+
+        ### Parameters
+        - `lexeme: str` specifies a lexeme to match in the current token
+        - `token_types: varargs` - specify any number of Token types to accept as valid
+        - `consume: bool` determines whether to move to next token if
+                    expectation was satisfied
+        - `required: bool` determines whether an error should be raised if
+                    expectation was satisfied
+        ### Usage
+            self.expect(Token.KEYWORD, "HAI") # The current token needs to specifically be a "HAI" keyword
+            self.expect(Token.NUMBAR) # The current token has to be a NUMBAR literal
+        ### Return
+            True if expectations were met, otherwise False
+        """
+        if self.current.lexeme == "\t": self.next()
+
         if lexeme != None and self.current.lexeme != lexeme:
             if required:
                 raise Exception(f"Expected {self.current.lexeme}, got {lexeme}")
@@ -67,35 +54,46 @@ class Parser:
             if required:
                 raise Exception(f"Expected {token_types}, got {self.current.type}")
             else: return None
-    
-        if consume: 
-            self.next()
 
-        return lexeme if lexeme else True
+        got = self.current.lexeme
+
+        if consume: self.next()
+
+        # self.ast.add_child(self.current)
+        return got
     
-    '''----------------------------# 
+    # Used for expecting non-terminals
+    def accept(self, abstraction, err_msg="Unexpected non-terminal!"):
+        _accept = abstraction()
+        if _accept == None:
+            Log.e(err_msg)
+            raise Exception(err_msg)
+        
+        # self.ast.move(self.current)
+        return _accept
+    
+    '''-----------------------------------------------------------------------------------# 
     In recursive descent, each function represents a non-terminal symbol in the grammar.
     The expansion/s of each non-terminal symbol is handled inside the functions.
 
     This implementation of recursive descent could be more intuitive 
     when constructing the Abstract Syntax Tree.
-    #----------------------------'''
+    #-----------------------------------------------------------------------------------'''
 
     def program(self):
         self.expect(Token.KEYWORD, "HAI")
         self.expect(Token.NUMBAR)
         
         # EVERYTHING HAPPENS HERE
-        while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
-            self.statement()
-            self.next()
-
+        self.statement(depth=1)
+        # while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
+        
+        # self.ast.start_traverse()
         return True
 
-    def expr(self):
+    def expr(self): 
         if self.expect(Token.OPERATOR, required=False, consume=False):
             operation = self.current.lexeme
-            print(operation, end=" ")
 
             self.next()
             op1 = self.expr()
@@ -105,19 +103,28 @@ class Parser:
             match (operation):
                 case "NOT":
                     return not bool(op1)
+                
                 case "ANY OF" | "ALL OF":
                     operands = []
                     
-                    while self.expect(Token.KEYWORD, lexeme="AN", consume=False, required=False):
-                        self.next()
-                        op = self.expr()
-                        if op == None:
-                            raise Exception("Expected: bool or expression")
+                    while self.expect(Token.KEYWORD, lexeme="AN",required=False):
+                        op = self.accept(self.expr, err_msg="Expected: bool or expression")
                         operands.append(op)
-                    result = all(operands) if operation == "ALL OF" else any(operands)
 
-                    return result
+                    if operation == "ALL OF":
+                        return all(operands)
+                    elif operation == "ANY OF":
+                        return any(operands)
                     
+                case "SMOOSH":
+                    operands = [op1]
+                    
+                    while self.expect(Token.KEYWORD, lexeme="AN", required=False):
+                        value = self.accept(self.expr)
+                        operands.append(value)
+                        
+                    return "".join(operands)
+            
             self.expect(Token.KEYWORD, lexeme="AN")
 
             op2 = self.expr()
@@ -146,8 +153,6 @@ class Parser:
                     return op1 == op2
                 case "DIFFRINT":
                     return op1 != op2
-                case _:
-                    raise Exception(f"Operation {operation} not recognized")
              
         if self.expect(Token.NUMBAR, consume=False, required=False):
             got = float(self.current.lexeme)
@@ -159,43 +164,40 @@ class Parser:
             self.next()
             return got 
         
+        if self.expect(Token.YARN, consume=False, required=False):
+            got = str(self.current.lexeme)
+            self.next()
+            return got
+        
         if self.expect(Token.TROOF, consume=False, required=False):
-            Log.i(f"Got boolean: {self.current.lexeme}")
             got = self.current.lexeme 
             self.next()
             return got == "WIN"
         
-        raise Exception("Encountered invalid symbol in expression")
+        return None
 
-    def statement(self):
+    def statement(self, depth=0):
+        Log.yell(f"Depth: {depth}")
+        
+        # Create a branch for every statement ↓↓↓
+        if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
+            return None
+
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
-            Log.i("Assign!")
-            # if not self.assign():
-            #     raise Exception("Error occurred during declaration")
+            pass    
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
-            if not self.print():
-                raise Exception("Error occurred while executing VISIBLE")\
-        
-        if self.expect(Token.KEYWORD, lexeme="SMOOSH", required=False):
-            if not self.concat():
-                raise Exception("Error occurred while executing CONCAT")
+            self.accept(self.print, err_msg="Error occurred while executing VISIBLE")
             
-        # Create a branch for every statement ↓↓↓
-
-        return True
+        self.next()
+        return self.statement(depth=depth+1)
 
     def print(self):
-        if not self.expect(Token.YARN, Token.OPERATOR, Token.NUMBAR, Token.NUMBR, Token.TROOF, consume=False):
-            raise Exception(f"Expected literal or <expr>, got {self.current.lexeme}")
-        
-        Log.d(f"To print: {self.current.type}")
-        value = self.current.lexeme if self.current.type == Token.YARN else self.expr()
+        value = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
 
         if isinstance(value, bool):
             print("WIN" if value else "FAIL") 
         else: print(value)
-        Log.d(f"Printed {value}")
 
         return True
     

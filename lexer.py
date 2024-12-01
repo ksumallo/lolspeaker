@@ -44,7 +44,7 @@ class Token:
         (Pattern.YARN, YARN),
     )
 
-    ignore = (WHITESPACE, NEWLINE, COMMENT_SINGLE, COMMENT_MULTI)
+    ignore = (WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
 
     def __init__(self, lexeme, type=None, description="None"):
         self.lexeme = lexeme
