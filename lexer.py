@@ -2,9 +2,10 @@ from io import TextIOWrapper
 import re
 
 class Pattern:
-    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY)"
-    OPERATOR = r"\b(SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH)"
+    KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY|NUMBR|NUMBAR|YARN|TROOF|NOOB)"
+    OPERATOR = r"\b(SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK)"
     
+    CONCAT = r"\+"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     NUMBAR = r"\-?\d+\.\d+"
     NUMBR = r"\-?\d+"
@@ -14,11 +15,12 @@ class Pattern:
     WHITESPACE = r" "
     YARN_DELIMITER = r"\""
     COMMENT_SINGLE = r"BTW [^\n]*"
-    COMMENT_MULTI = r"OBTW\s+.*\s+TLDR"
+    COMMENT_MULTI = r"OBTW\s(.|\n)*\sTLDR"
 
 class Token:
     KEYWORD = "KEYWORD"
     IDENTIFIER = "IDENTIFIER"
+    CONCAT = "CONCAT"
     OPERATOR = "OPERATOR"
     NUMBR = "NUMBR"
     NUMBAR = "NUMBAR"
@@ -35,6 +37,7 @@ class Token:
         (Pattern.COMMENT_SINGLE, COMMENT_SINGLE),
         (Pattern.WHITESPACE, WHITESPACE),
         (Pattern.NEWLINE, NEWLINE),
+        (Pattern.CONCAT, CONCAT),
         (Pattern.OPERATOR, OPERATOR),
         (Pattern.KEYWORD, KEYWORD),
         (Pattern.TROOF, TROOF),
@@ -44,12 +47,14 @@ class Token:
         (Pattern.YARN, YARN),
     )
 
-    ignore = (WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
+    ignore = (NEWLINE, WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
 
-    def __init__(self, lexeme, type=None, description="None"):
+    def __init__(self, lexeme, type=None, description="None", line=-1, col=-1):
         self.lexeme = lexeme
         self.type = type
         self.description = description
+        self.line = line
+        self.col = col
 
     def get_lexeme(self):
         return self.lexeme
@@ -60,7 +65,10 @@ class Token:
     def get_desc(self):
         return self.description
     
-    def __str__(self):
+    def pos(self):
+        return f"[line: {self.line}, col: {self.col}]"
+    
+    def __repr__(self):
         return f"{self.type}: {self.lexeme}"
 
 # Dictionary for LOLCODE keyword descriptions
@@ -105,6 +113,7 @@ descriptions = {
     "A": "Type specifier in casting",
     "IS NOW A": "Dynamic type change",
     "VISIBLE": "Output statement",
+    "+": "Concatenation Operator",
     "GIMMEH": "Input statement",
     "O RLY?": "Start of conditional block",
     "YA RLY": "True branch of conditional",
@@ -145,7 +154,9 @@ class Lexer:
         elif isinstance(input, str):
             self.source_code = input
         else: raise TypeError(f"Cannot accept {type(input)}. Input a string or a File.")
-        
+
+        self.curr_line = 1
+        self.curr_col = 0
         self.tokens = self.tokenize() # Tokenize becomes part of __init__
 
     def get_tokens(self):  # Use get_item to return value
@@ -166,18 +177,25 @@ class Lexer:
                     description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
                     # Add new token to token list
+                    if token_type == Token.NEWLINE:
+                        self.curr_line += 1
+                        self.curr_col = 0
+                        # token = Token(match_str, token_type, description)
+                        # tokens.append(token)  
+                        
                     if token_type not in Token.ignore:
-                        token = Token(match_str, token_type, description)
+                        token = Token(match_str, token_type, description, self.curr_line, self.curr_col)
                         tokens.append(token)  
 
                     # Advance the cursor by the length of the lexeme
                     self.source_code = self.source_code[match.end():]
+                    self.curr_col += match.end()
                     break
             else: raise ValueError(f"Unexpected character: \"{self.source_code[0]}\"")
 
         print("(✓) Tokenization finished.") # Relocated at the bottom for console readability
         print("Tokens:", len(tokens))
-        print(tokens)
+        # print(tokens)
 
         # Print all tokens
         for token in tokens:

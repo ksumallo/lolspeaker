@@ -5,12 +5,12 @@ class Log:
     PREFIX_WARN = "W"
     PREFIX_ERROR = "E"
 
-    COLOR_DEBUG = '\033[30m'
-    COLOR_YELL = '\033[32m'
-    COLOR_INFO = '\033[34m'
-    COLOR_WARN = '\033[33m'
-    COLOR_ERROR = '\033[31m'
-    COLOR_CLEAR = '\033[0m'
+    COLOR_DEBUG = '\033[30m' # BLACK (GRAY)
+    COLOR_YELL = '\033[32m' # GREEN
+    COLOR_INFO = '\033[34m' # BLUE
+    COLOR_WARN = '\033[33m' # YELLOW
+    COLOR_ERROR = '\033[31m' # RED
+    COLOR_CLEAR = '\033[0m' # CLEAR FORMATTING
 
     show_logs = True
 

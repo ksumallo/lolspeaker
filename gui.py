@@ -1,5 +1,5 @@
 import tkinter as Tk
-from tkinter import Frame, Button, Label, Text, Entry, filedialog, StringVar, END
+from tkinter import Frame, Button, Label, Text, Entry, filedialog, simpledialog, StringVar, END
 from tkinter.ttk import Treeview
 import platform
 
@@ -8,6 +8,7 @@ from os.path import abspath
 import ctypes   
 
 from lexer import Lexer
+from parser import Parser
 
 # Check if the OS is Windows before calling SetProcessDpiAwareness
 if platform.system() == "Windows":
@@ -42,7 +43,7 @@ class LOLCodeInterpreter:
         self.import_btn = Button(self.file_picker_row, text="Import", command=self.import_file)
         self.import_btn.pack(side="right")
         
-        self.editor = Text(self.pane_source, wrap="char")
+        self.editor = Text(self.pane_source, wrap="char", font=("Consolas"))
         self.editor.pack(side="bottom")
 
         # LEXEME TABLE PANE
@@ -74,11 +75,20 @@ class LOLCodeInterpreter:
         self.execute_btn.grid(row=1, column=0, columnspan=3, sticky="ew", pady=pane_pad, padx=pane_pad)
 
         # CONSOLE
-        self.console = Text(self.frame, wrap="char", bg="#000000", fg="#ffffff")
+        self.buffer = ""
+        self.console = Text(self.frame, wrap="char", bg="#000000", fg="#ffffff", font=("Consolas"))
         self.console.grid(row=2, column=0, columnspan=3, sticky="ews", padx=pane_pad, pady=pane_pad)
+        # self.console["state"] = "disabled"
+        # self.console.bind("<Key>", self.capture_input)
         
     def start(self):
         self.root.mainloop()
+
+    def add_symbol(self, var, val):
+        self.symbol_table.insert('', END, text=var, values=(val,))
+
+    def remove_symbol(self):
+        pass
 
     def import_file(self):
         # Accept only .lol or .lols files
@@ -96,6 +106,39 @@ class LOLCodeInterpreter:
         # Append source code to editor
         self.editor.insert(END, source_code)
 
+    def cout(self, str):
+        ''' Prints to the console '''
+        self.console["state"] = "normal"
+        self.console.insert(END, str)
+        self.console["state"] = "disable"
+
+    # Could've been used to capture inputs directly from the terminal
+    # def capture_input(self, chr):
+    #     self.console["state"] = "normal"
+    #     console_contents = self.console.get("1.0",'end-1c')
+    #     print("CONTENTS:", console_contents)
+    #     if chr.char == '\x08':
+    #         self.buffer = self.buffer[:-1]
+    #     else:
+    #         self.buffer += chr.char
+
+    #     console_contents += self.buffer
+        
+    #     self.console.delete(1.0, END)
+    #     self.console.insert(END, console_contents)
+    #     self.console["state"] = "disable"
+
+    def cin(self):
+        '''
+        Used by `GIMMEH`; called when user input is needed
+        '''
+        answer = simpledialog.askstring("GIMMEH", "Enter input", 
+                                        parent=self.root)
+        
+        print(f"GOT: {answer}")
+        return answer
+        
+
     def execute(self):
         # Clear lexeme table
         for child in self.lexeme_table.get_children():
@@ -105,13 +148,23 @@ class LOLCodeInterpreter:
         for child in self.symbol_table.get_children():
             self.symbol_table.delete(child)
 
+        # Clear console
+        self.console.delete('1.0', END)
+
         # Feed source code to lexer
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
 
+        print("TOKENS:", tokens)
+
+        self.parser = Parser(self)
+        self.parser.set_tokens(tokens)
+
+        self.parser.start()
+
         for token in tokens:             
             if token.get_desc() not in ("Whitespace", "Newline"): 
-                self.lexeme_table.insert('', END , text=token.get_lexeme(), values=(token.get_desc(),))
+                self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
             else:
                 self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 

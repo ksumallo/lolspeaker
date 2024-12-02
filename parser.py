@@ -1,15 +1,31 @@
 from lexer import Lexer, Token
 from utils import Log
+from time import sleep
 # from syntax_tree import AST, Node
 
 Log.show(True)
 
 class Parser:
-    def __init__(self, tokens):
-        self.tokens = tokens
+    def __init__(self, gui):
+        self.gui = gui
+        self.tokens = []
         self.cursor = 0
-        # self.ast = AST()  # Root node of the AST
+        self.current = None # self.tokens[self.cursor]
+
+        self.flags = {
+            'brk': False
+        }
+
+        # Runtime 
+        self.vars = {}
+        self.var_types = {}
+
+    def set_tokens(self, _tokens):
+        self.tokens = _tokens
         self.current = self.tokens[self.cursor]
+
+    def set_gui(self, _tk_gui):
+        self.gui = _tk_gui
 
     def next(self):
         """
@@ -19,6 +35,16 @@ class Parser:
 
         if self.cursor < len(self.tokens):
             self.current = self.tokens[self.cursor]
+        else: raise Exception("Token overflow!")
+
+    def seek(self, pos):
+        """
+        Moves to the cursor to `pos`, then updates the current token
+        """
+        self.cursor = pos
+
+        if self.cursor < len(self.tokens):
+            self.current = self.tokens[self.cursor ]
         else: raise Exception("Token overflow!")
     
     def curr_node(self):
@@ -43,23 +69,20 @@ class Parser:
         ### Return
             True if expectations were met, otherwise False
         """
-        if self.current.lexeme == "\t": self.next()
-
         if lexeme != None and self.current.lexeme != lexeme:
             if required:
-                raise Exception(f"Expected {self.current.lexeme}, got {lexeme}")
+                raise Exception(f"{self.current.pos()} Expected {lexeme}, got {self.current.lexeme}")
             else: return None
 
         if self.current.type not in token_types:
             if required:
-                raise Exception(f"Expected {token_types}, got {self.current.type}")
+                raise Exception(f"{self.current.pos()} Expected {token_types}, got {self.current.type} ({self.current.lexeme})")
             else: return None
 
         got = self.current.lexeme
 
         if consume: self.next()
 
-        # self.ast.add_child(self.current)
         return got
     
     # Used for expecting non-terminals
@@ -67,9 +90,8 @@ class Parser:
         _accept = abstraction()
         if _accept == None:
             Log.e(err_msg)
-            raise Exception(err_msg)
+            raise Exception(f"{self.current.pos()} {err_msg} : {self.current.lexeme}")
         
-        # self.ast.move(self.current)
         return _accept
     
     '''-----------------------------------------------------------------------------------# 
@@ -80,28 +102,42 @@ class Parser:
     when constructing the Abstract Syntax Tree.
     #-----------------------------------------------------------------------------------'''
 
+    def start(self):
+        self._set("it", 0)
+        self.program()
+
     def program(self):
         self.expect(Token.KEYWORD, "HAI")
-        self.expect(Token.NUMBAR)
+        self.expect(Token.NUMBAR, required=False)
+
+        # Variable Declarations
+        self.expect(Token.KEYWORD, lexeme="WAZZUP")
+        while not self.expect(Token.KEYWORD, lexeme="BUHBYE", required=False):
+            self.expect(Token.KEYWORD, "I HAS A")
+            self.accept(self.declare, err_msg="Expected assignment statement")
         
-        # EVERYTHING HAPPENS HERE
-        self.statement(depth=1)
-        # while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
+        # Program Body
+        while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
+            self.accept(self.statement, err_msg="Statement not recognized")
         
-        # self.ast.start_traverse()
         return True
 
     def expr(self): 
-        if self.expect(Token.OPERATOR, required=False, consume=False):
-            operation = self.current.lexeme
-
-            self.next()
-            op1 = self.expr()
-            if op1 == None:
-                raise Exception(f"Expected: <expression>, got {self.current.lexeme}")
+        Log.d(f"EXPRESSION: {self.current}")
+        if operation := self.expect(Token.OPERATOR, required=False):
+            Log.yell("First Operand")
+            op1 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
             
             match (operation):
                 case "NOT":
+                    op1 = self.cast(op1, "TROOF")
+                    return not bool(op1)
+                
+                case "MAEK":
+                    op1 = self.cast(op1, "TROOF")
+                    target = self.expect(Token.KEYWORD)
+                    result = self.cast()
+                    self._set("it", )
                     return not bool(op1)
                 
                 case "ANY OF" | "ALL OF":
@@ -109,6 +145,7 @@ class Parser:
                     
                     while self.expect(Token.KEYWORD, lexeme="AN",required=False):
                         op = self.accept(self.expr, err_msg="Expected: bool or expression")
+                        # op = self.cast(op, "TROOF")
                         operands.append(op)
 
                     if operation == "ALL OF":
@@ -121,18 +158,20 @@ class Parser:
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", required=False):
                         value = self.accept(self.expr)
+                        value = self.cast(op, "YARN")
                         operands.append(value)
                         
                     return "".join(operands)
             
             self.expect(Token.KEYWORD, lexeme="AN")
 
-            op2 = self.expr()
-            if not op2:
-                raise Exception("Expected: <expression>")
+            Log.yell("Second Operand")
+            op2 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
+
+            op1, op2 = float(op1), float(op2)
             
+            # Arithmetic Operations
             match operation:
-                # Arithmetic
                 case "SUM OF":
                     return op1 + op2
                 case "DIFF OF":
@@ -148,64 +187,315 @@ class Parser:
                 case "SMALLR OF":
                     return min(op1, op2)
                 
-                # Conditional
+            op1, op2 = bool(op1), bool(op2)
+            
+            # Boolean Operations
+            match operation:
                 case "BOTH SAEM":
                     return op1 == op2
                 case "DIFFRINT":
                     return op1 != op2
+                case "BOTH OF":
+                    return op1 & op2
+                case "EITHER OF":
+                    return op1 | op2
+                case "WON OF":
+                    return op1 ^ op2
+                
+                
              
-        if self.expect(Token.NUMBAR, consume=False, required=False):
-            got = float(self.current.lexeme)
-            self.next()
-            return got 
+        if got := self.expect(Token.NUMBAR, required=False):
+            return float(got) 
         
-        if self.expect(Token.NUMBR, consume=False, required=False):
-            got = int(self.current.lexeme)
-            self.next()
-            return got 
+        if got := self.expect(Token.NUMBR, required=False):
+            return int(got) 
         
-        if self.expect(Token.YARN, consume=False, required=False):
-            got = str(self.current.lexeme)
-            self.next()
-            return got
+        if got := self.expect(Token.YARN, required=False):
+            return str(got)
         
-        if self.expect(Token.TROOF, consume=False, required=False):
-            got = self.current.lexeme 
-            self.next()
+        if got := self.expect(Token.TROOF, required=False):
             return got == "WIN"
+        
+        if got := self.expect(Token.IDENTIFIER, required=False):
+            _val = self._get(got)
+            if _val == None:
+                return "(NOOB)"
+            else: return _val
         
         return None
 
-    def statement(self, depth=0):
-        Log.yell(f"Depth: {depth}")
-        
+    def statement(self):
         # Create a branch for every statement ↓↓↓
+        Log.i(f"Got statement: {self.current.lexeme}")
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
-            pass    
+            raise Exception(f"{self.current.pos()} Variable declaration not allowed here")
+        
+        # <operator> <x> AN <y> | <operator> <x1> AN <x2> ... <xn> | NOT <x>
+        if self.expect(Token.OPERATOR, consume=False, required=False):
+            Log.i(f"Got operation: {self.current.lexeme}")
+            it = self.accept(self.expr, err_msg=f"Error evaluating expression")
+            self._set("it", it)
+
+        # <varident> R <expr>
+        if self.expect(Token.IDENTIFIER, consume=False, required=False):
+            self.accept(self.assign, err_msg=f"Error assigning value to variable")
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
-            self.accept(self.print, err_msg="Error occurred while executing VISIBLE")
+            self.accept(self.print, err_msg="Error occurred while in VISIBLE")
+
+        if self.expect(Token.KEYWORD, lexeme="GIMMEH", required=False):
+            self.accept(self.input, err_msg="Error occurred while in GIMMEH")
+
+        if self.expect(Token.KEYWORD, lexeme="O RLY?", required=False):
+            self.accept(self.cond, err_msg="Error occurred while in IM IN YR")
+
+        if self.expect(Token.KEYWORD, lexeme="IM IN YR", required=False):
+            self.accept(self.loop, err_msg="Error occurred while in IM IN YR")
+
+        if self.expect(Token.KEYWORD, lexeme="MAEK", required=False):
+            self.accept(self.cast, err_msg="Error occurred while in IM IN YR")
             
-        self.next()
-        return self.statement(depth=depth+1)
+        if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
+            self.flags["brk"] = True
+            
+        return True
 
     def print(self):
-        value = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
+        first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
+        operands = [self.cast(first, "YARN")]
+                    
+        while self.expect(Token.CONCAT, lexeme="+", required=False):
+            op = self.accept(self.expr, err_msg="Expected: <expr>")
+            operands.append(self.cast(op, "YARN"))
 
-        if isinstance(value, bool):
-            print("WIN" if value else "FAIL") 
-        else: print(value)
+        buffer = "".join(operands) + '\n'
+        self.gui.cout(buffer)
+        print(buffer, end='')
+            
+        return True
+    
+    # Not an abstraction
+    def cast(self, val, target):
+        match target:
+            case "TROOF":
+                return bool(val)
+            case "NUMBR":
+                try:
+                    i = int(val)
+                    return i
+                except:
+                    return float(val)
+            case "NUMBAR":
+                return float(val)
+            case "YARN":
+                if val == None:
+                    return "(nil)"
+                elif isinstance(val, bool):
+                    return "WIN" if val else "FAIL"
+                elif isinstance(val, float):
+                    return "%.2f" % val
+                elif isinstance(val, int):
+                    return str(val)
+                else: 
+                    return str(val)
+            case _:
+                return "WAHHH"
+    
+    # def cast(self, val=None, target=None):
+    #     if val != None and target != None:
+    #         var = self.expect(Token.IDENTIFIER)
+    #         self.expect(Token.KEYWORD, lexeme="A", required=False)
+    #         target = self.expect(Token.KEYWORD, required=False)
+
+    #         if target not in ("NUMBR", "NUMBAR", "YARN", "TROOF", "NOOB"):
+    #             raise Exception(f"Expected: <TYPE>, got {self.current.lexeme}")
+
+    #     match target:
+    #         case "TROOF":
+    #             return bool(val)
+    #         case "NUMBR":
+    #             try:
+    #                 i = int(val)
+    #                 return i
+    #             except:
+    #                 return float(val)
+    #         case "NUMBAR":
+    #             return float(val)
+    #         case "YARN":
+    #             if val == None:
+    #                 return "(nil)"
+    #             elif isinstance(val, bool):
+    #                 return "WIN" if val else "FAIL"
+    #             elif isinstance(val, float):
+    #                 return "%.2f" % val
+    #             elif isinstance(val, int):
+    #                 return str(val)
+    #             else: 
+    #                 return str(val)
+    #         case _:
+    #             return "WAHHH"
+        
+    # def recast(self): # , val=None, target=None
+    #     var = self.expect(Token.IDENTIFIER)
+    #     match self.typeof()
+    #     match target:
+    #         case "TROOF":
+    #             return bool(val)
+    #         case "NUMBR":
+    #             return int(val)
+    #         case "NUMBAR":
+    #             try:
+    #                 i = int(val)
+    #                 return i
+    #             except:
+    #                 return float(val)
+    #         case "YARN":
+    #             if val == None:
+    #                 return "(nil)"
+    #             elif isinstance(val, bool):
+    #                 return "WIN" if val else "FAIL"
+    #             elif isinstance(val, float):
+    #                 return "%.2f" % val
+    #             elif isinstance(val, int):
+    #                 return str(val)
+    #             else: 
+    #                 return str(val)
+    #         case _:
+    #             return "WAHHH"
+
+    def _set(self, var, val):
+        type = self.typeof(val)
+
+        self.vars[var] = val
+        self.var_types[var] = type
+        self.gui.add_symbol(var, self.cast(val, "YARN"))
+        # Log.i(f"SET: {var} = {val}")
+
+    def _get(self, var):
+        if var not in self.vars:
+            raise Exception(f"Accessing undeclared variable: {var}")
+        
+        # Log.i(f"GET: {var} => {self.vars[var]}")
+        return self.vars[var]
+    
+    def assign(self):
+        var = self.expect(Token.IDENTIFIER)
+        self.expect(Token.KEYWORD, lexeme="R")
+        
+        value = self.accept(self.expr, err_msg="Expected: <expr>")
+        
+        self._set(var, value)
+        
+        return True
+    
+    def declare(self):
+        var = self.expect(Token.IDENTIFIER)
+
+        value = None
+        if self.expect(Token.KEYWORD, lexeme="ITZ", required=False):
+            value = self.accept(self.expr)
+
+        self._set(var, value)
 
         return True
     
+    def typeof(self, value):
+        if value == None:
+            return "NOOB"
+        elif isinstance(value, str):
+            return "YARN"
+        elif isinstance(value, int):
+            return "NUMBR"
+        elif isinstance(value, float):
+            return "NUMBAR"
+        elif isinstance(value, bool):
+            return "TROOF"
+        
+    # MAEK <var> [A] <type>
+    # <var> IS NOW A <type> (?)
+        
+    def input(self):
+        var = self.expect(Token.IDENTIFIER)
+        _input = self.gui.cin()
+        self._set(var, _input)
+
+        return True
+
+    # O RLY?
+    
+    def loop(self):
+        label = self.expect(Token.IDENTIFIER)
+        operation = self.expect(Token.KEYWORD, required=False)
+
+        if operation not in ("UPPIN", "NERFIN"): 
+            raise Exception(f"Expected UPPIN or NERFIN, got {cond}")
+
+        self.expect(Token.KEYWORD, "YR")
+
+        var = self.expect(Token.IDENTIFIER)
+        cond = self.expect(Token.KEYWORD, required=False)
+
+        if cond not in ("TIL", "WILE"):
+            raise Exception(f"Expected TIL or WILE, got {cond}")
+        
+        # Jump to the conditional
+        self.vars[label] = int(self.cursor)
+        end = None
+
+        # Find the index of the IM OUTTA YR token
+        for i in range(self.vars[label], len(self.tokens)):
+            if self.tokens[i].lexeme == "IM OUTTA YR":
+                if self.tokens[i+1].lexeme == label:
+                    end = i+2
+                    break
+
+        if end == None: raise Exception(f"Loop \"{label}\" has no matching IM OUTTA YR")
+
+        # Execute loop
+        while True:
+            # Evaluate condition
+            cond_result = self.accept(self.expr)
+
+            if cond == "TIL" and cond_result:
+                self.seek(end)
+                break
+            if cond == "WILE" and not cond_result:
+                self.seek(end)
+                break
+
+            # Execute loop body
+            while not self.expect(Token.KEYWORD, lexeme="IM OUTTA YR", consume=False, required=False):
+                self.statement()
+
+                # Handle GTFO
+                if self.flags["brk"]:
+                    self.flags["brk"] = False
+                    break
+            
+            # Modifier application
+            Log.d(f"{operation} {label}")
+            if operation == "UPPIN":
+                self.vars[var] += 1
+            elif operation == "NERFIN":
+                self.vars[var] -= 1
+
+            # Reset cursor to loop start
+            self.seek(self.vars[label])
+
+        Log.yell("Finished looping!")
+        if self._get(label):
+            del self.vars[label]
+
+        return True
+        
 # MAIN
-tokens = Lexer(open("project-testcases/test_2.lol", "r")).get_tokens()
+# tokens = Lexer(open("project-testcases/test_1.lol", "r")).get_tokens()
 
-parser = Parser(tokens)
-result = parser.program()
+# parser = Parser(tokens)
+# success = parser.program()
 
-# print("Result:", result)
-Log.d("Parsing completed successfully!")
+# # print("Result:", result)
+# Log.d("Parsing completed successfully!")
