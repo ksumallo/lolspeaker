@@ -120,8 +120,9 @@ class Parser:
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             print(f"Reading: {self.current}")
             if self.current.type == Token.KEYWORD: self.accept(self.statement, err_msg="Statement not recognized")
-            else: self.accept(self.expr, err_msg="Expression not recognized")
-        return True
+            else: 
+                expr_val = self.accept(self.expr, err_msg="Expression not recognized")
+                if self.expect(Token.KEYWORD, lexeme="O RLY?", consume=False, required=False): self.cond(expr_val)
 
     def expr(self): 
         Log.d(f"EXPRESSION: {self.current}")
@@ -149,22 +150,27 @@ class Parser:
                     operands = []
                     
                     while not self.expect(Token.KEYWORD, lexeme="MKAY", consume=False, required=False):
-                        op = self.accept(self.expr, err_msg="Expected: bool or expression")
+                        if operand := self.expect(Token.KEYWORD, lexeme="AN", required=False): 
+                            continue
+                        else: op = self.accept(self.expr, err_msg="Expected: bool or expression")
                         # op = self.cast(op, "TROOF")
                         operands.append(op)
+
+                    self.next() #For MKAY
 
                     if operation == "ALL OF":
                         return all(operands)
                     elif operation == "ANY OF":
                         return any(operands)
                     
+
                 case "SMOOSH":
                     operands = [op1]
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", required=False):
                         value = self.accept(self.expr)
                         value = self.cast(value, "YARN")
-                        print(value)
+                        # print(value)
                         operands.append(value)
                         
                     return "".join(operands)
@@ -192,15 +198,15 @@ class Parser:
                     return max(op1, op2)
                 case "SMALLR OF":
                     return min(op1, op2)
+                case "BOTH SAEM":
+                    return (op1 == op2)
+                case "DIFFRINT":
+                    return (op1 != op2)
                 
             op1, op2 = bool(op1), bool(op2)
             
             # Boolean Operations
             match operation:
-                case "BOTH SAEM":
-                    return op1 == op2
-                case "DIFFRINT":
-                    return op1 != op2
                 case "BOTH OF":
                     return op1 & op2
                 case "EITHER OF":
@@ -226,11 +232,12 @@ class Parser:
             _val = self._get(got)
 
             if self.expect(Token.KEYWORD, lexeme="R", consume=False, required=False):
-                print("YOOHOO")
+                # print("YOOHOO")
                 self.assign(got)
 
             if self.expect(Token.KEYWORD, lexeme="IS NOW A", required=False):
                 caster = self.expect(Token.KEYWORD)
+                self.vars[got] = self.cast(self.vars[got], caster)
                 self.var_types[got] = caster
                 
             if _val == None:
@@ -266,13 +273,13 @@ class Parser:
             self.accept(self.input, err_msg="Error occurred while in GIMMEH")
 
         if self.expect(Token.KEYWORD, lexeme="O RLY?", required=False):
-            self.accept(self.cond, err_msg="Error occurred while in IM IN YR")
+            self.accept(self.cond, err_msg="Error occurred while in O RLY?")
 
         if self.expect(Token.KEYWORD, lexeme="IM IN YR", required=False):
             self.accept(self.loop, err_msg="Error occurred while in IM IN YR")
 
         if self.expect(Token.KEYWORD, lexeme="MAEK", required=False):
-            self.accept(self.cast, err_msg="Error occurred while in IM IN YR")
+            self.accept(self.cast, err_msg="Error occurred while in MAEK")
             
         if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
             self.flags["brk"] = True
@@ -447,7 +454,28 @@ class Parser:
         return True
 
     # O RLY?
-    
+    def cond(self, parameter):
+        self.expect(Token.KEYWORD, lexeme="O RLY?")
+        while not self.expect(Token.KEYWORD, lexeme="OIC", consume=False, required=False):
+            if self.expect(Token.KEYWORD, lexeme="YA RLY"):
+                while not self.expect(Token.KEYWORD, lexeme="NO WAI", consume=False, required=False):
+                    if self.expect(Token.KEYWORD, lexeme="OIC", consume=False, required=False):
+                        self.next()
+                        return
+                    if parameter:
+                        if self.current.type == Token.KEYWORD: self.accept(self.statement, err_msg="Statement not recognized")
+                        else: self.accept(self.expr, err_msg="Expression not recognized")
+                    else: self.next()
+            if self.expect(Token.KEYWORD, lexeme="NO WAI"):
+                while not self.expect(Token.KEYWORD, lexeme="OIC", consume=False, required=False):
+                    if not parameter:
+                        if self.current.type == Token.KEYWORD: self.accept(self.statement, err_msg="Statement not recognized")
+                        else: self.accept(self.expr, err_msg="Expression not recognized")
+                    else: self.next()
+        else: 
+            self.next()
+            return
+
     def loop(self):
         label = self.expect(Token.IDENTIFIER)
         operation = self.expect(Token.KEYWORD, required=False)
