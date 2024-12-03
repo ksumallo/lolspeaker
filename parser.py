@@ -233,6 +233,25 @@ class Parser:
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
             raise Exception(f"{self.current.pos()} Variable declaration not allowed here")
         
+        # user input: GIMMEH
+        if self.expect(Token.KEYWORD, lexeme="GIMMEH", required=False):
+            var = self.expect(Token.IDENTIFIER)  # Expect an identifier for the variable to store the input
+            
+            # after 'GIMMEH', we expect user input
+            user_input = self.accept(self.input, err_msg="Error occurred while in GIMMEH")
+            
+            # Set the input value to the variable
+            self._set(var, user_input)
+            
+            # we've stored the value, set IT to the value of the input
+            self._set("it", user_input)
+            
+            return True
+
+        # switch-case block
+        if self.expect(Token.KEYWORD, lexeme="WTF?", required=False):
+            self.switch_case()
+
         # <operator> <x> AN <y> | <operator> <x1> AN <x2> ... <xn> | NOT <x>
         if self.expect(Token.OPERATOR, consume=False, required=False):
             Log.i(f"Got operation: {self.current.lexeme}")
@@ -245,9 +264,6 @@ class Parser:
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
             self.accept(self.print, err_msg="Error occurred while in VISIBLE")
-
-        if self.expect(Token.KEYWORD, lexeme="GIMMEH", required=False):
-            self.accept(self.input, err_msg="Error occurred while in GIMMEH")
 
         if self.expect(Token.KEYWORD, lexeme="O RLY?", required=False):
             self.accept(self.cond, err_msg="Error occurred while in IM IN YR")
@@ -490,7 +506,77 @@ class Parser:
             del self.vars[label]
 
         return True
-        
+    
+    def switch_case(self):
+        # Get the value of the implicit IT variable
+        it_value = self._get("it")
+        case_matched = False  # Flag to track if a case is matched
+
+        Log.d(f"Starting switch-case. IT value: {it_value}")
+
+        while True:
+            # If we encounter OMG, we are now in a case block
+            if self.expect(Token.KEYWORD, lexeme="OMG", required=False):
+                case_value = self.accept(self.expr, err_msg="Expected case value")
+
+                Log.d(f"Case value: {case_value}, IT value: {it_value}")
+
+                if case_value == it_value:
+                    Log.d(f"Case matched: {case_value} == {it_value}")
+                    # If case matched, execute the statements inside the case block
+                    while True:
+                        Log.d("Inside case block")
+                        Log.d(f"Current token: {self.current.lexeme}")
+
+                        # Handle GIMMEH input inside the case
+                        if self.expect(Token.KEYWORD, lexeme="GIMMEH", required=False):
+                            Log.d(f"current token: {self.current.lexeme}")
+                            Log.d(f"current token type: {self.current.type}")
+
+                            # Directly process user input without expecting an identifier
+                            user_input = self.accept(self.input, err_msg="Error occurred while inside case GIMMEH")
+
+                            # Store the user input in the variable and in IT
+                            var = "input_var"  # Default variable name for GIMMEH input
+                            self._set(var, user_input)
+                            self._set("it", user_input)
+
+                            # Move on to the next statement after GIMMEH
+                            continue  # Skip to the next iteration of the case block
+
+                        # Execute other statements inside the case block
+                        self.statement()  # Run the general statement handling here
+
+                        # Check if the 'GTFO' is encountered and break out of the loop
+                        if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
+                            Log.d("GTFO encountered, exiting case.")
+                            break  # Exit the loop when 'GTFO' is encountered
+
+                        # If a break flag is set, exit the loop
+                        if self.flags["brk"]:
+                            self.flags["brk"] = False
+                            break
+
+                    case_matched = True
+                    break  # Exit the loop after finding a matching case
+
+            # If no cases matched, check for the default case: OMGWTF
+            if self.expect(Token.KEYWORD, lexeme="OMGWTF", required=False):
+                Log.d("Default case (OMGWTF) executed.")
+                while True:
+                    self.statement()  # Execute statements in the default block
+                    # Exit if we reach OIC after processing the default block
+                    if self.expect(Token.KEYWORD, lexeme="OIC", required=False):
+                        Log.d("OIC encountered, exiting default case.")
+                        break
+                break  # Exit the loop after executing the default case
+
+            # If we've reached the OIC keyword, exit the loop
+            elif self.expect(Token.KEYWORD, lexeme="OIC", required=False):
+                Log.d("Switch-case ended with OIC.")
+                break  # Exit the loop if we encounter OIC
+
+
 # MAIN
 # tokens = Lexer(open("project-testcases/test_1.lol", "r")).get_tokens()
 
