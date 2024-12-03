@@ -9,6 +9,7 @@ import ctypes
 
 from lexer import Lexer
 from parser import Parser
+from utils import Log
 
 # Check if the OS is Windows before calling SetProcessDpiAwareness
 if platform.system() == "Windows":
@@ -155,18 +156,14 @@ class LOLCodeInterpreter:
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
 
-        print("TOKENS:", tokens)
-
+        # print("TOKENS:", tokens)
         self.parser = Parser(self)
         self.parser.set_tokens(tokens)
 
-        self.parser.start()
+        self.parser.parse()
 
-        for token in tokens:             
-            if token.get_desc() not in ("Whitespace", "Newline"): 
-                self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
-            else:
-                self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
+        for token in tokens:
+            self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()

@@ -3,7 +3,7 @@ from utils import Log
 from time import sleep
 # from syntax_tree import AST, Node
 
-Log.show(True)
+Log.show(False)
 
 class Parser:
     def __init__(self, gui):
@@ -13,19 +13,38 @@ class Parser:
         self.current = None # self.tokens[self.cursor]
 
         self.flags = {
-            'brk': False
+            'JMPOUT': False
         }
 
         # Runtime 
         self.vars = {}
         self.var_types = {}
+        self.loops = {}
+        self.funcs = {}
+
+        _global_scope = {
+            "vars": {},
+            "var_types": {},
+            "loops": {},
+            "funcs": {},
+        }
+
+        self.stack = [_global_scope]
+
+    def _push(self, layer):
+        self.stack.append(layer)
+
+    def _pop(self):
+        if len(self.stack) == 1:
+            raise Exception(f"{self.current.pos()} Tried popping an empty stack")
+        else: self.stack.pop()
+
+    def _top_of_stack(self):
+        return self.stack[-1]
 
     def set_tokens(self, _tokens):
         self.tokens = _tokens
         self.current = self.tokens[self.cursor]
-
-    def set_gui(self, _tk_gui):
-        self.gui = _tk_gui
 
     def next(self):
         """
@@ -86,7 +105,7 @@ class Parser:
         return got
     
     # Used for expecting non-terminals
-    def accept(self, abstraction, err_msg="Unexpected non-terminal!"):
+    def accept(self, abstraction, err_msg=f"Unexpected non-terminal!"):
         _accept = abstraction()
         if _accept == None:
             Log.e(err_msg)
@@ -102,8 +121,8 @@ class Parser:
     when constructing the Abstract Syntax Tree.
     #-----------------------------------------------------------------------------------'''
 
-    def start(self):
-        self._set("it", 0)
+    def parse(self):
+        self._set("IT", 0)
         self.program()
 
     def program(self):
@@ -123,27 +142,29 @@ class Parser:
         return True
 
     def expr(self): 
-        Log.d(f"EXPRESSION: {self.current}")
+        sleep(0.05)
         if operation := self.expect(Token.OPERATOR, required=False):
-            Log.yell("First Operand")
             op1 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
             
-            match (operation):
+            match operation:
                 case "NOT":
                     op1 = self.cast(op1, "TROOF")
                     return not bool(op1)
                 
                 case "MAEK":
-                    op1 = self.cast(op1, "TROOF")
-                    target = self.expect(Token.KEYWORD)
-                    result = self.cast()
-                    self._set("it", )
-                    return not bool(op1)
+                    pass
+                    # # TODO Implement this
+                    # op1 = self.cast(op1, "TROOF")
+                    # target = self.expect(Token.KEYWORD)
+                    # result = self.cast()
+                    # self._set("IT", 0)
+                    # return not bool(op1)
                 
                 case "ANY OF" | "ALL OF":
                     operands = []
                     
-                    while self.expect(Token.KEYWORD, lexeme="AN",required=False):
+                    while not self.expect(Token.KEYWORD, lexeme="MKAY", required=False):
+                        self.expect(Token.KEYWORD, lexeme="AN")
                         op = self.accept(self.expr, err_msg="Expected: bool or expression")
                         # op = self.cast(op, "TROOF")
                         operands.append(op)
@@ -165,7 +186,6 @@ class Parser:
             
             self.expect(Token.KEYWORD, lexeme="AN")
 
-            Log.yell("Second Operand")
             op2 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
 
             op1, op2 = float(op1), float(op2)
@@ -201,8 +221,6 @@ class Parser:
                     return op1 | op2
                 case "WON OF":
                     return op1 ^ op2
-                
-                
              
         if got := self.expect(Token.NUMBAR, required=False):
             return float(got) 
@@ -225,8 +243,8 @@ class Parser:
         return None
 
     def statement(self):
-        # Create a branch for every statement ↓↓↓
-        Log.i(f"Got statement: {self.current.lexeme}")
+        # Create a branch for everyn statement ↓↓↓
+        Log.i(f"Got statement: {self.current}")
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
@@ -237,7 +255,7 @@ class Parser:
         if self.expect(Token.OPERATOR, consume=False, required=False):
             Log.i(f"Got operation: {self.current.lexeme}")
             it = self.accept(self.expr, err_msg=f"Error evaluating expression")
-            self._set("it", it)
+            self._set("IT", it)
 
         # <varident> R <expr>
         if self.expect(Token.IDENTIFIER, consume=False, required=False):
@@ -259,7 +277,16 @@ class Parser:
             self.accept(self.cast, err_msg="Error occurred while in IM IN YR")
             
         if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
-            self.flags["brk"] = True
+            self.flags["JMPOUT"] = True
+
+        if self.expect(Token.KEYWORD, lexeme="HOW IZ I", required=False):
+            self.accept(self.def_func, err_msg="Error occured while in I IZ")
+
+        if self.expect(Token.KEYWORD, lexeme="I IZ", required=False):
+            self.accept(self.call, err_msg="Error occured while in declaring function")
+
+        if self.expect(Token.KEYWORD, lexeme="FOUND YR", required=False):
+            self.accept(self.ret, err_msg="Error occured while in FOUND YR")
             
         return True
 
@@ -267,7 +294,7 @@ class Parser:
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         operands = [self.cast(first, "YARN")]
                     
-        while self.expect(Token.CONCAT, lexeme="+", required=False):
+        while self.expect(Token.CONCAT, lexeme="+", required=False) and not self.expect(Token.KEYWORD, lexeme="MKAY", required=False):
             op = self.accept(self.expr, err_msg="Expected: <expr>")
             operands.append(self.cast(op, "YARN"))
 
@@ -367,19 +394,47 @@ class Parser:
     #             return "WAHHH"
 
     def _set(self, var, val):
-        type = self.typeof(val)
+        _type = self.typeof(val)
 
-        self.vars[var] = val
-        self.var_types[var] = type
-        self.gui.add_symbol(var, self.cast(val, "YARN"))
-        # Log.i(f"SET: {var} = {val}")
+        if var == "IT":
+            self.stack[0]["vars"][var] = val
+            self.stack[0]["var_types"][var] = _type
+            self.gui.add_symbol(var, self.cast(val, "YARN"))
+            return
+        else:
+            self._top_of_stack()["vars"][var] = val
+            self._top_of_stack()["var_types"][var] = _type
+            self.gui.add_symbol(var, self.cast(val, "YARN"))
+
+        # self.vars[var] = val
+        # self.var_types[var] = _type
+        Log.i(f"SET: {var} = {val}")
 
     def _get(self, var):
-        if var not in self.vars:
-            raise Exception(f"Accessing undeclared variable: {var}")
+        if var == "IT":
+            Log.i(f"GET: {var} => {self.stack[0]["vars"][var]}")
+            return self.stack[0]["vars"][var]
         
-        # Log.i(f"GET: {var} => {self.vars[var]}")
-        return self.vars[var]
+        if var not in self._top_of_stack()["vars"]:
+            raise Exception(f"{self.current.pos()} Accessing undeclared variable: {var}")
+        
+        Log.i(f"GET: {var} => {self._top_of_stack()["vars"][var]}")
+        return self._top_of_stack()["vars"][var]
+        
+    
+    def _get_loop(self, var):
+        if var not in self._top_of_stack()["loops"]:
+            raise Exception(f"Loop label not found: {var}")
+        
+        # Log.i(f"GET: {var} => {self.loops[var]}")
+        return self._top_of_stack()["loops"][var]
+    
+    def _get_func(self, fun):
+        if fun not in self.funcs:
+            raise Exception(f"{self.current.pos()} Function undefined: {fun}")
+        
+        # Log.i(f"GET: {var} => {self.funcs[var]}")
+        return self.funcs[fun]
     
     def assign(self):
         var = self.expect(Token.IDENTIFIER)
@@ -428,7 +483,7 @@ class Parser:
     
     def loop(self):
         label = self.expect(Token.IDENTIFIER)
-        operation = self.expect(Token.KEYWORD, required=False)
+        operation = self.expect(Token.KEYWORD)
 
         if operation not in ("UPPIN", "NERFIN"): 
             raise Exception(f"Expected UPPIN or NERFIN, got {cond}")
@@ -468,11 +523,11 @@ class Parser:
 
             # Execute loop body
             while not self.expect(Token.KEYWORD, lexeme="IM OUTTA YR", consume=False, required=False):
-                self.statement()
+                self.accept(self.statement)
 
                 # Handle GTFO
-                if self.flags["brk"]:
-                    self.flags["brk"] = False
+                if self.flags["BRK"]:
+                    self.flags["BRK"] = False
                     break
             
             # Modifier application
@@ -490,12 +545,93 @@ class Parser:
             del self.vars[label]
 
         return True
-        
-# MAIN
-# tokens = Lexer(open("project-testcases/test_1.lol", "r")).get_tokens()
+    
+    def call(self):
+        funcident = self.expect(Token.IDENTIFIER)
+        arg_count = 0
+        jmp, params = self._get_func(funcident)
 
-# parser = Parser(tokens)
-# success = parser.program()
+        scope = {
+            "name": funcident,
+            "jmp": -1,
+            "vars": {},
+            "var_types": {},
+            "loop": {},
+            "ret": -1
+        }
+
+        for p in range(len(params)):
+            self.expect(Token.KEYWORD, lexeme="YR")
+
+            arg = self.accept(self.expr, err_msg="Error in accepting arguments")
+
+            param = params[p]
+            scope["vars"][param] = arg
+            arg_count += 1
+
+            if not self.expect(Token.KEYWORD, lexeme="AN", required=False):
+                break
+
+        if arg_count != len(params):
+            raise Exception(f"Mismatched number of arguments, expected {len(params)}, got {arg_count}")
+        
+        # Position where the cursor will jump to after returning from function
+        ret = int(self.cursor)
+        
+        scope["jmp"] = jmp
+        scope["ret"] = ret
+
+        # Go back to the position where the function was called
+        self._push(scope)
+        self.seek(self._top_of_stack()["jmp"])
+
+        # Run function body
+        while not self.expect(Token.KEYWORD, lexeme="IF U SAY SO", consume=False, required=False):
+            self.accept(self.statement, err_msg=f"Error encountered in {self.current.pos()} {funcident}()")
+            if self.flags["JMPOUT"]: 
+                self.flags["JMPOUT"] = False
+                break
+        
+        # Go back to the position where the function was called
+        # Then pop the function scope from the stack
+        self.seek(self._top_of_stack()["ret"])
+        self._pop()
+
+        return True
+    
+    def def_func(self):
+        funcident = self.expect(Token.IDENTIFIER)
+
+        params = []
+        while self.expect(Token.KEYWORD, lexeme="YR", required=False):
+            param = self.expect(Token.IDENTIFIER)
+            params.append(param)
+            if not self.expect(Token.KEYWORD, lexeme="AN", required=False):
+                break
+        jmp = int(self.cursor)
+        
+        self.funcs[funcident] = (jmp, params)
+
+        while not self.expect(Token.KEYWORD, lexeme="IF U SAY SO", required=False):
+            self.next()
+
+        return True
+
+    def ret(self):
+        # Assign return value to [IT]
+        ret_val = self.accept(self.expr, err_msg=f"{self.current.pos()} Invalid return value")
+        self._set("IT", ret_val)
+
+        # Set JMP flag
+        self.flags["JMPOUT"] = True
+
+        return True
+
+# MAIN
+# tokens = Lexer(open("project-testcases/05_bool.lol", "r")).get_tokens()
+
+# parser = Parser()
+# success = parser.parse()
 
 # # print("Result:", result)
 # Log.d("Parsing completed successfully!")

@@ -15,7 +15,7 @@ HAI
     BUHBYE
 
     BTW print literals and variables
-    VISIBLE "declarations"
+    VISIBLE "declarations" "POP"
     VISIBLE monde BTW should be NOOB
     VISIBLE num
     VISIBLE name

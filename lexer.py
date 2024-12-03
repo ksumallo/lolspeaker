@@ -69,7 +69,7 @@ class Token:
         return f"[line: {self.line}, col: {self.col}]"
     
     def __repr__(self):
-        return f"{self.type}: {self.lexeme}"
+        return f"[{self.line}:{self.col}] {self.type}: {self.lexeme}"
 
 # Dictionary for LOLCODE keyword descriptions
 descriptions = {
@@ -198,7 +198,7 @@ class Lexer:
         # print(tokens)
 
         # Print all tokens
-        for token in tokens:
-            print(token) 
+        # for token in tokens:
+        #     print(token) 
 
         return tokens

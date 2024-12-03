@@ -28,7 +28,7 @@ HAI
 		OMG 3
 			VISIBLE "Enter width: "
 			GIMMEH input
-			VISIBLE "Square Area: " PRODUCKT OF input AN input
+			VISIBLE "Square Area: " + PRODUCKT OF input AN input
 			GTFO
 		OMG 0
 			VISIBLE "Goodbye"
