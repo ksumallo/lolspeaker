@@ -107,13 +107,15 @@ class Parser:
         self.program()
 
     def program(self):
+        self.accept(self.statement)
         self.expect(Token.KEYWORD, "HAI")
         self.expect(Token.NUMBAR, required=False)
+        self.expect(Token.NEWLINE)
 
         # Variable Declarations
         self.expect(Token.KEYWORD, lexeme="WAZZUP")
         while not self.expect(Token.KEYWORD, lexeme="BUHBYE", required=False):
-            self.expect(Token.KEYWORD, "I HAS A")
+            self.expect(Token.KEYWORD, lexeme="I HAS A")
             self.accept(self.declare, err_msg="Expected assignment statement")
         
         # Program Body
@@ -249,7 +251,7 @@ class Parser:
     def statement(self):
         # Create a branch for every statement ↓↓↓
         Log.i(f"Got statement: {self.current.lexeme} of {self.current.type}")
-
+        
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
@@ -283,16 +285,19 @@ class Parser:
             
         if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
             self.flags["brk"] = True
-        
-        return True
+
+        # Statement delimiter
+        return self.expect(Token.NEWLINE)
 
     def print(self):
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         operands = [self.cast(first, "YARN")]
                     
-        while self.expect(Token.CONCAT, lexeme="+", required=False):
+        while self.expect(Token.CONCAT):
             op = self.accept(self.expr, err_msg="Expected: <expr>")
             operands.append(self.cast(op, "YARN"))
+            if self.expect(Token.NEWLINE, required=False):
+                break
 
         buffer = "".join(operands) + '\n'
         self.gui.cout(buffer)

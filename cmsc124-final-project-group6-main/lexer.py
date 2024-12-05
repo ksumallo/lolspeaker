@@ -14,7 +14,7 @@ class Pattern:
     NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
     WHITESPACE = r" "
     YARN_DELIMITER = r"\""
-    COMMENT_SINGLE = r"BTW [^\n]*"
+    COMMENT_SINGLE = r"BTW [^\n]*\n"
     COMMENT_MULTI = r"OBTW\s(.|\n)*\sTLDR"
 
 class Token:
@@ -47,7 +47,7 @@ class Token:
         (Pattern.YARN, YARN),
     )
 
-    ignore = (NEWLINE, WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
+    ignore = (WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
 
     def __init__(self, lexeme, type=None, description="None", line=-1, col=-1):
         self.lexeme = lexeme
