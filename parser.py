@@ -1,9 +1,24 @@
 from lexer import Lexer, Token
 from utils import Log
 from time import sleep
+from checker import *
 # from syntax_tree import AST, Node
 
-Log.show(False)
+Log.show(True)
+
+class Error:
+    _gui = None
+
+    @staticmethod
+    def set_output_stream(gui):
+        Error._gui = gui
+
+    @staticmethod
+    def throw(err: Exception, *args):
+        # Error._gui.cout(f"=============== [ EXECUTION STOPPED ] ===============\n")
+        e = err(*args)
+        # Error._gui.cout(f"{e.message}")
+        raise e
 
 class Parser:
     def __init__(self, gui):
@@ -31,6 +46,8 @@ class Parser:
 
         self.stack = [_global_scope]
 
+        # Error.set_output_stream(gui)
+
     def _push(self, layer):
         self.stack.append(layer)
 
@@ -47,9 +64,8 @@ class Parser:
         self.current = self.tokens[self.cursor]
 
     def next(self):
-        """
-        Moves to the next token by incrementing the cursor by 1
-        """
+        "Moves to the next token by incrementing the cursor by 1"
+
         self.cursor += 1
 
         if self.cursor < len(self.tokens):
@@ -57,9 +73,8 @@ class Parser:
         else: raise Exception("Token overflow!")
 
     def seek(self, pos):
-        """
-        Moves to the cursor to `pos`, then updates the current token
-        """
+        "Moves to the cursor to `pos`, then updates the current token"
+
         self.cursor = pos
 
         if self.cursor < len(self.tokens):
@@ -90,12 +105,12 @@ class Parser:
         """
         if lexeme != None and self.current.lexeme != lexeme:
             if required:
-                raise Exception(f"{self.current.pos()} Expected {lexeme}, got {self.current.lexeme}")
+                Error.throw(SyntaxError, self.current, lexeme)
             else: return None
 
         if self.current.type not in token_types:
             if required:
-                raise Exception(f"{self.current.pos()} Expected {token_types}, got {self.current.type} ({self.current.lexeme})")
+                Error.throw(SyntaxError, {"current": self.current.types, "expected": token_types})
             else: return None
 
         got = self.current.lexeme
@@ -109,7 +124,7 @@ class Parser:
         _accept = abstraction()
         if _accept == None:
             Log.e(err_msg)
-            raise Exception(f"{self.current.pos()} {err_msg} : {self.current.lexeme}")
+            Error.throw(UnknownError, {"current": self.current})
         
         return _accept
     
@@ -139,10 +154,10 @@ class Parser:
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             self.accept(self.statement, err_msg="Statement not recognized")
         
+        Log.yell("End.")
         return True
 
-    def expr(self): 
-        sleep(0.05)
+    def expr(self):
         if operation := self.expect(Token.OPERATOR, required=False):
             op1 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
             
@@ -192,6 +207,10 @@ class Parser:
             
             # Arithmetic Operations
             match operation:
+                case "BOTH SAEM":
+                    return op1 == op2
+                case "DIFFRINT":
+                    return op1 != op2
                 case "SUM OF":
                     return op1 + op2
                 case "DIFF OF":
@@ -211,17 +230,13 @@ class Parser:
             
             # Boolean Operations
             match operation:
-                case "BOTH SAEM":
-                    return op1 == op2
-                case "DIFFRINT":
-                    return op1 != op2
                 case "BOTH OF":
                     return op1 & op2
                 case "EITHER OF":
                     return op1 | op2
                 case "WON OF":
                     return op1 ^ op2
-             
+
         if got := self.expect(Token.NUMBAR, required=False):
             return float(got) 
         
@@ -245,11 +260,12 @@ class Parser:
     def statement(self):
         # Create a branch for everyn statement ↓↓↓
         Log.i(f"Got statement: {self.current}")
+        sleep(0.05)
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
-            raise Exception(f"{self.current.pos()} Variable declaration not allowed here")
+            Error.throw(IllegalDeclareError, {"current": self.current})
         
         # <operator> <x> AN <y> | <operator> <x1> AN <x2> ... <xn> | NOT <x>
         if self.expect(Token.OPERATOR, consume=False, required=False):
@@ -268,7 +284,7 @@ class Parser:
             self.accept(self.input, err_msg="Error occurred while in GIMMEH")
 
         if self.expect(Token.KEYWORD, lexeme="O RLY?", required=False):
-            self.accept(self.cond, err_msg="Error occurred while in IM IN YR")
+            self.accept(self.cond, err_msg="Error occurred while in O RLY?")
 
         if self.expect(Token.KEYWORD, lexeme="IM IN YR", required=False):
             self.accept(self.loop, err_msg="Error occurred while in IM IN YR")
@@ -294,7 +310,7 @@ class Parser:
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         operands = [self.cast(first, "YARN")]
                     
-        while self.expect(Token.CONCAT, lexeme="+", required=False) and not self.expect(Token.KEYWORD, lexeme="MKAY", required=False):
+        while self.expect(Token.CONCAT, lexeme="+", required=False):
             op = self.accept(self.expr, err_msg="Expected: <expr>")
             operands.append(self.cast(op, "YARN"))
 
@@ -400,7 +416,6 @@ class Parser:
             self.stack[0]["vars"][var] = val
             self.stack[0]["var_types"][var] = _type
             self.gui.add_symbol(var, self.cast(val, "YARN"))
-            return
         else:
             self._top_of_stack()["vars"][var] = val
             self._top_of_stack()["var_types"][var] = _type
@@ -416,22 +431,22 @@ class Parser:
             return self.stack[0]["vars"][var]
         
         if var not in self._top_of_stack()["vars"]:
-            raise Exception(f"{self.current.pos()} Accessing undeclared variable: {var}")
+            Error.throw(VariableError, {"current": self.current, "var": var})
         
         Log.i(f"GET: {var} => {self._top_of_stack()["vars"][var]}")
         return self._top_of_stack()["vars"][var]
         
     
-    def _get_loop(self, var):
-        if var not in self._top_of_stack()["loops"]:
-            raise Exception(f"Loop label not found: {var}")
+    def _get_loop(self, label):
+        if label not in self._top_of_stack()["loops"]:
+            Error.throw(LoopLabelError, {"current": self.current, "label": label})
         
         # Log.i(f"GET: {var} => {self.loops[var]}")
-        return self._top_of_stack()["loops"][var]
+        return self._top_of_stack()["loops"][label]
     
     def _get_func(self, fun):
         if fun not in self.funcs:
-            raise Exception(f"{self.current.pos()} Function undefined: {fun}")
+            Error.throw(FunctionUndefinedError, {"current": self.current, "identifier": fun})
         
         # Log.i(f"GET: {var} => {self.funcs[var]}")
         return self.funcs[fun]
@@ -480,13 +495,65 @@ class Parser:
         return True
 
     # O RLY?
+    def cond(self):
+        if_start = int(self.cursor)
+        win_branch, fail_branch, end = None, None, None
+        mebbe = []
+
+        while not self.expect(Token.KEYWORD, lexeme="OIC", required=False):
+            Log.w(f"Current token: {self.current} (pos = {self.cursor})")
+
+            match self.current.lexeme: 
+                case "YA RLY": win_branch = int(self.cursor)
+                case "NO WAI": fail_branch = int(self.cursor)
+                case "MEBBE": mebbe.append(int(self.cursor))
+            
+            Log.w("Nexting")
+            self.next()
+        
+        end = int(self.cursor)
+        self.seek(if_start)
+        Log.d(f"LEXEME AT START: {self.tokens[if_start]}")
+        Log.d(f"BRANCHES: {list(map(lambda b: self.tokens[b], mebbe))}")
+
+        JMP = None
+
+        if self._get("IT"):
+            JMP = win_branch
+        
+        if not JMP:
+            for branch in mebbe:
+                self.seek(branch + 1)
+                if self.accept(self.expr, err_msg=f"{self.current.pos()} Error evaluating expression"):
+                    JMP = branch
+                    break
+        
+        if all([not JMP, fail_branch, not self._get("IT")]):
+            JMP = fail_branch
+
+        if not JMP:
+            # Skip O RLY? block
+            self.seek(end)
+            return True
+        
+        JMP += 1 # So that it jumps straight to the branch body
+        self.seek(JMP)
+
+        # LOGIC FOR EACH BRANCH
+        while not self.expect(Token.KEYWORD, consume=False, required=False) in ("MEBBE", "NO WAI", "OIC"):
+            self.accept(self.statement, err_msg=f"{self.current.pos} Error evaluating statement in O RLY?")
+
+        self.seek(end)
+        Log.i(f"Exiting O RLY?... Now at {self.tokens[end]}")
+
+        return True
     
     def loop(self):
         label = self.expect(Token.IDENTIFIER)
         operation = self.expect(Token.KEYWORD)
 
         if operation not in ("UPPIN", "NERFIN"): 
-            raise Exception(f"Expected UPPIN or NERFIN, got {cond}")
+            Error.throw(SyntaxError, {"current": self.current, "expected": "UPPIN or NERFIN"})
 
         self.expect(Token.KEYWORD, "YR")
 
@@ -494,7 +561,7 @@ class Parser:
         cond = self.expect(Token.KEYWORD, required=False)
 
         if cond not in ("TIL", "WILE"):
-            raise Exception(f"Expected TIL or WILE, got {cond}")
+            Error.throw(SyntaxError, {"current": self.current, "expected": "TIL or WILE"})
         
         # Jump to the conditional
         self.vars[label] = int(self.cursor)
@@ -504,10 +571,10 @@ class Parser:
         for i in range(self.vars[label], len(self.tokens)):
             if self.tokens[i].lexeme == "IM OUTTA YR":
                 if self.tokens[i+1].lexeme == label:
-                    end = i+2
+                    end = i+2 # Skip IM OUTTA YR and <expr>
                     break
 
-        if end == None: raise Exception(f"Loop \"{label}\" has no matching IM OUTTA YR")
+        if end == None: Error.throw(LoopUnclosedError, {"current": self.current, "label": label})
 
         # Execute loop
         while True:
@@ -573,7 +640,7 @@ class Parser:
                 break
 
         if arg_count != len(params):
-            raise Exception(f"Mismatched number of arguments, expected {len(params)}, got {arg_count}")
+            Error.throw(ArgumentMismatchError, {"current": self.current, "expected": len(params)})
         
         # Position where the cursor will jump to after returning from function
         ret = int(self.cursor)

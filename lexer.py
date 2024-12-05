@@ -180,8 +180,12 @@ class Lexer:
                     if token_type == Token.NEWLINE:
                         self.curr_line += 1
                         self.curr_col = 0
-                        # token = Token(match_str, token_type, description)
-                        # tokens.append(token)  
+                    
+                    # if token_type == Token.COMMENT_MULTI:
+                    #     self.curr_line += match_str.count('\n')
+                    #     self.curr_col = 0
+                    #     # token = Token(match_str, token_type, description)
+                    #     # tokens.append(token)  
                         
                     if token_type not in Token.ignore:
                         token = Token(match_str, token_type, description, self.curr_line, self.curr_col)
