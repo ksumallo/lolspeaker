@@ -10,63 +10,70 @@ class Error(Exception):
     def set_cout(cout):
         Error._gui = cout
 
-class SyntaxError(Exception):
+class SyntaxError(Error):
     def __init__(self, current, expected):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tSyntaxError: Expected {expected}, but got {current.lexeme}"
         super().__init__(self.message)
 
-class VariableError(Exception):
+class VariableError(Error):
     def __init__(self, current, var):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tVariableError: Accessing undeclared variable '{var}'"
         super().__init__(self.message)
 
-class FunctionUndefinedError(Exception):
+class FunctionUndefinedError(Error):
     def __init__(self, current, identifier):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tFunctionUndefinedError: Accessing undeclared variable '{identifier}'"
         super().__init__(self.message)        
 
-class LoopLabelError(Exception):
+class LoopLabelError(Error):
     def __init__(self, current, label):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tVariableError: Loop with label '{label}' not found"
         super().__init__(self.message)
 
-class LoopUnclosedError(Exception):
+class LoopUnclosedError(Error):
     def __init__(self, current, label):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\LoopUnclosedError: Loop '{label}' has no matching IM OUTTA YR"
         super().__init__(self.message)
 
-class ArgumentMismatchError(Exception):
+class ArgumentMismatchError(Error):
     def __init__(self, current, expected):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tArgumentMismatchError: Mismatched number of arguments, expected {expected}, got {curr.lexeme}"
         super().__init__(self.message)
 
-class ExpressionError(Exception):
+class ExpressionError(Error):
     def __init__(self, current):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\ExpressionError: Encountered error while parsing expression"
         super().__init__(self.message)
 
-class UnknownError(Exception):
+class UnknownError(Error):
     def __init__(self, current):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\tUnknownError: Couldn't identify error"
         super().__init__(self.message)
 
-class IllegalDeclareError(Exception):
+class CastError(Error):
+    def __init__(self, current, _from, _to, val='?'):
+        self.line = current.line
+        self.col = current.col
+        self.message = f"At line {self.line}, col {self.col}:\n\CastError: Cannot cast {_from} to {_to} (Value: {val})"
+        super().__init__(self.message)
+
+class IllegalDeclareError(Error):
     def __init__(self, current):
         self.line = current.line
         self.col = current.col
