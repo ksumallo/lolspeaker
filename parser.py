@@ -6,19 +6,19 @@ from checker import *
 
 Log.show(True)
 
-class Error:
-    _gui = None
+# class Error:
+#     _gui = None
 
-    @staticmethod
-    def set_output_stream(gui):
-        Error._gui = gui
+#     @staticmethod
+#     def set_output_stream(gui):
+#         Error._gui = gui
 
-    @staticmethod
-    def throw(err: Exception, *args):
-        # Error._gui.cout(f"=============== [ EXECUTION STOPPED ] ===============\n")
-        e = err(*args)
-        # Error._gui.cout(f"{e.message}")
-        raise e
+#     @staticmethod
+#     def throw(err: Exception, args):
+#         Error._gui.cout(f"=============== [ EXECUTION STOPPED ] ===============\n")
+#         e = err(args)
+#         Error._gui.cout(f"{e.message}")
+#         raise e
 
 class Parser:
     def __init__(self, gui):
@@ -46,7 +46,7 @@ class Parser:
 
         self.stack = [_global_scope]
 
-        # Error.set_output_stream(gui)
+        Error.set_cout(gui)
 
     def _push(self, layer):
         self.stack.append(layer)
@@ -105,12 +105,12 @@ class Parser:
         """
         if lexeme != None and self.current.lexeme != lexeme:
             if required:
-                Error.throw(SyntaxError, self.current, lexeme)
+                raise SyntaxError(self.current, lexeme)
             else: return None
 
         if self.current.type not in token_types:
             if required:
-                Error.throw(SyntaxError, {"current": self.current.types, "expected": token_types})
+                raise SyntaxError(current=self.current, expected=token_types)
             else: return None
 
         got = self.current.lexeme
@@ -124,7 +124,7 @@ class Parser:
         _accept = abstraction()
         if _accept == None:
             Log.e(err_msg)
-            Error.throw(UnknownError, {"current": self.current})
+            raise UnknownError(current=self.current)
         
         return _accept
     
@@ -265,7 +265,7 @@ class Parser:
             return None
 
         if self.expect(Token.KEYWORD, lexeme="I HAS A", required=False):
-            Error.throw(IllegalDeclareError, {"current": self.current})
+            raise IllegalDeclareError(current=self.current)
         
         # <operator> <x> AN <y> | <operator> <x1> AN <x2> ... <xn> | NOT <x>
         if self.expect(Token.OPERATOR, consume=False, required=False):
@@ -431,7 +431,7 @@ class Parser:
             return self.stack[0]["vars"][var]
         
         if var not in self._top_of_stack()["vars"]:
-            Error.throw(VariableError, {"current": self.current, "var": var})
+            raise VariableError(current=self.current, var=var)
         
         Log.i(f"GET: {var} => {self._top_of_stack()["vars"][var]}")
         return self._top_of_stack()["vars"][var]
@@ -439,14 +439,14 @@ class Parser:
     
     def _get_loop(self, label):
         if label not in self._top_of_stack()["loops"]:
-            Error.throw(LoopLabelError, {"current": self.current, "label": label})
+            raise LoopLabelError(current=self.current, label=label)
         
         # Log.i(f"GET: {var} => {self.loops[var]}")
         return self._top_of_stack()["loops"][label]
     
     def _get_func(self, fun):
         if fun not in self.funcs:
-            Error.throw(FunctionUndefinedError, {"current": self.current, "identifier": fun})
+            raise FunctionUndefinedError(current=self.current, identifier=fun)
         
         # Log.i(f"GET: {var} => {self.funcs[var]}")
         return self.funcs[fun]
@@ -553,7 +553,7 @@ class Parser:
         operation = self.expect(Token.KEYWORD)
 
         if operation not in ("UPPIN", "NERFIN"): 
-            Error.throw(SyntaxError, {"current": self.current, "expected": "UPPIN or NERFIN"})
+            raise SyntaxError(current=self.current, expected="UPPIN or NERFIN")
 
         self.expect(Token.KEYWORD, "YR")
 
@@ -561,7 +561,7 @@ class Parser:
         cond = self.expect(Token.KEYWORD, required=False)
 
         if cond not in ("TIL", "WILE"):
-            Error.throw(SyntaxError, {"current": self.current, "expected": "TIL or WILE"})
+            raise SyntaxError(current=self.current, expected="TIL or WILE")
         
         # Jump to the conditional
         self.vars[label] = int(self.cursor)
@@ -574,7 +574,7 @@ class Parser:
                     end = i+2 # Skip IM OUTTA YR and <expr>
                     break
 
-        if end == None: Error.throw(LoopUnclosedError, {"current": self.current, "label": label})
+        if end == None: raise LoopUnclosedError(current=self.current, label=label)
 
         # Execute loop
         while True:
@@ -640,7 +640,7 @@ class Parser:
                 break
 
         if arg_count != len(params):
-            Error.throw(ArgumentMismatchError, {"current": self.current, "expected": len(params)})
+            raise ArgumentMismatchError(current=self.current, expected=len(params))
         
         # Position where the cursor will jump to after returning from function
         ret = int(self.cursor)

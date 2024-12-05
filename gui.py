@@ -113,6 +113,11 @@ class LOLCodeInterpreter:
         self.console.insert(END, str)
         self.console["state"] = "disable"
 
+    def clear_console(self):
+        self.console["state"] = "normal"
+        self.console.delete('1.0', END)
+        self.console["state"] = "disable"
+
     # Could've been used to capture inputs directly from the terminal
     # def capture_input(self, chr):
     #     self.console["state"] = "normal"
@@ -129,11 +134,11 @@ class LOLCodeInterpreter:
     #     self.console.insert(END, console_contents)
     #     self.console["state"] = "disable"
 
-    def cin(self):
+    def cin(self, message="Enter input"):
         '''
         Used by `GIMMEH`; called when user input is needed
         '''
-        answer = simpledialog.askstring("GIMMEH", "Enter input", 
+        answer = simpledialog.askstring("GIMMEH", message, 
                                         parent=self.root)
         
         print(f"GOT: {answer}")
@@ -150,7 +155,7 @@ class LOLCodeInterpreter:
             self.symbol_table.delete(child)
 
         # Clear console
-        self.console.delete('1.0', END)
+        self.clear_console()
 
         # Feed source code to lexer
         code = self.editor.get("1.0", 'end-1c')

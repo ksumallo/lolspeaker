@@ -1,3 +1,15 @@
+class Error(Exception):
+    _gui = None
+
+    def __init__(self, message):
+        super().__init__(self.message)
+        if Error._gui:
+            Error._gui.cout(self.message)
+
+    @staticmethod
+    def set_cout(cout):
+        Error._gui = cout
+
 class SyntaxError(Exception):
     def __init__(self, current, expected):
         self.line = current.line
@@ -41,9 +53,11 @@ class ArgumentMismatchError(Exception):
         super().__init__(self.message)
 
 class ExpressionError(Exception):
-    @staticmethod
-    def throw():
-        pass
+    def __init__(self, current):
+        self.line = current.line
+        self.col = current.col
+        self.message = f"At line {self.line}, col {self.col}:\n\ExpressionError: Encountered error while parsing expression"
+        super().__init__(self.message)
 
 class UnknownError(Exception):
     def __init__(self, current):
