@@ -361,40 +361,6 @@ class Parser:
                     
             case _:
                 raise CastToUnknownTypeError(self.current, self.typeof(val), target, val)
-    
-    # def cast(self, val=None, target=None):
-    #     if val != None and target != None:
-    #         var = self.expect(Token.IDENTIFIER)
-    #         self.expect(Token.KEYWORD, lexeme="A", required=False)
-    #         target = self.expect(Token.KEYWORD, required=False)
-
-    #         if target not in ("NUMBR", "NUMBAR", "YARN", "TROOF", "NOOB"):
-    #             raise Exception(f"Expected: <TYPE>, got {self.current.lexeme}")
-
-    #     match target:
-    #         case "TROOF":
-    #             return bool(val)
-    #         case "NUMBR":
-    #             try:
-    #                 i = int(val)
-    #                 return i
-    #             except:
-    #                 return float(val)
-    #         case "NUMBAR":
-    #             return float(val)
-    #         case "YARN":
-    #             if val == None:
-    #                 return "(nil)"
-    #             elif isinstance(val, bool):
-    #                 return "WIN" if val else "FAIL"
-    #             elif isinstance(val, float):
-    #                 return "%.2f" % val
-    #             elif isinstance(val, int):
-    #                 return str(val)
-    #             else: 
-    #                 return str(val)
-    #         case _:
-    #             return "WAHHH"
         
     # def recast(self): # , val=None, target=None
     #     var = self.expect(Token.IDENTIFIER)
