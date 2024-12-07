@@ -4,6 +4,7 @@ import re
 class Pattern:
     KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY|NUMBR|NUMBAR|YARN|TROOF|NOOB)"
     OPERATOR = r"\b(SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK)"
+    TYPE = r"\b(NUMBR|NUMBAR|TROOF|YARN|NOOB)"
     
     CONCAT = r"\+"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
@@ -11,19 +12,20 @@ class Pattern:
     NUMBR = r"\-?\d+"
     YARN = r"\"[^\n\"]*\""
     TROOF = r"\b(WIN|FAIL)\b"
-    NEWLINE = r"(\n|\t|\:\)|\.\.\.)"
-    WHITESPACE = r" "
-    YARN_DELIMITER = r"\""
+    NEWLINE = r"(\s*\n\s*|\.\.\.)"
+    WHITESPACE = r" |\t"
     COMMENT_SINGLE = r"BTW [^\n]*"
     COMMENT_MULTI = r"OBTW\s(.|\n)*\sTLDR"
 
 class Token:
     KEYWORD = "KEYWORD"
-    IDENTIFIER = "IDENTIFIER"
-    CONCAT = "CONCAT"
     OPERATOR = "OPERATOR"
-    NUMBR = "NUMBR"
+    TYPE = "TYPE"
+
+    CONCAT = "CONCAT"
+    IDENTIFIER = "IDENTIFIER"
     NUMBAR = "NUMBAR"
+    NUMBR = "NUMBR"
     YARN = "YARN"
     TROOF = "TROOF"
     NEWLINE = "NEWLINE"
@@ -38,6 +40,7 @@ class Token:
         (Pattern.WHITESPACE, WHITESPACE),
         (Pattern.NEWLINE, NEWLINE),
         (Pattern.CONCAT, CONCAT),
+        (Pattern.TYPE, TYPE),
         (Pattern.OPERATOR, OPERATOR),
         (Pattern.KEYWORD, KEYWORD),
         (Pattern.TROOF, TROOF),
@@ -47,7 +50,7 @@ class Token:
         (Pattern.YARN, YARN),
     )
 
-    ignore = (NEWLINE, WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
+    ignore = (WHITESPACE, COMMENT_SINGLE, COMMENT_MULTI)
 
     def __init__(self, lexeme, type=None, description="None", line=-1, col=-1):
         self.lexeme = lexeme
@@ -69,7 +72,7 @@ class Token:
         return f"[line: {self.line}, col: {self.col}]"
     
     def __repr__(self):
-        return f"{self.type}: {self.lexeme}"
+        return f"[{self.line}:{self.col}] {self.type}: {self.lexeme}"
 
 # Dictionary for LOLCODE keyword descriptions
 descriptions = {
@@ -80,7 +83,8 @@ descriptions = {
     Token.IDENTIFIER: "Identifier",
     Token.COMMENT_SINGLE: "Single-line comment",
     Token.COMMENT_MULTI: "Multiline comment",
-    "TYPE Literal": "Type identifier",
+    Token.NEWLINE: "Line break",
+    Token.TYPE: "Type identifier",
     "<identifier>": "Variable, function, or loop name",
     "HAI": "Start of program",
     "KTHXBYE": "End of program",
@@ -141,10 +145,6 @@ descriptions = {
     "\n": "Newline",
 }
 
-class Classification:
-    DELIMITER = r"\b(HAI|KTHXBYE)\b"
-    LITERAL = r"\b\.+\b"
-
 class Lexer:
     def __init__(self, input):
         # Check if it is an opened file
@@ -176,12 +176,14 @@ class Lexer:
                     # Given a lexeme, find the appropriate description
                     description = descriptions.get(match_str, None) or descriptions.get(token_type, "?") 
 
-                    # Add new token to token list
-                    if token_type == Token.NEWLINE:
-                        self.curr_line += 1
-                        self.curr_col = 0
-                        # token = Token(match_str, token_type, description)
-                        # tokens.append(token)  
+                    # Trim single- and double-quotes
+                    if token_type == Token.YARN:
+                        match_str = match_str[1:-1]
+
+                    if token_type in (Token.COMMENT_MULTI, Token.NEWLINE):
+                        self.curr_line += match_str.count('\n')
+                        i_last_newline = match_str.rfind('\n')
+                        self.curr_col = len(match_str[match_str.rfind('\n'):match.end()])
                         
                     if token_type not in Token.ignore:
                         token = Token(match_str, token_type, description, self.curr_line, self.curr_col)
@@ -198,7 +200,7 @@ class Lexer:
         # print(tokens)
 
         # Print all tokens
-        for token in tokens:
-            print(token) 
+        # for token in tokens:
+        #     print(token) 
 
         return tokens

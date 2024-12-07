@@ -9,6 +9,7 @@ import ctypes
 
 from lexer import Lexer
 from parser import Parser
+from utils import Log
 
 # Check if the OS is Windows before calling SetProcessDpiAwareness
 if platform.system() == "Windows":
@@ -85,7 +86,12 @@ class LOLCodeInterpreter:
         self.root.mainloop()
 
     def add_symbol(self, var, val):
-        self.symbol_table.insert('', END, text=var, values=(val,))
+        try:
+            self.symbol_table.item(var, values=(val,))
+            Log.i(f"Updated {var}!")
+        except:
+            self.symbol_table.insert('', END, iid=var, text=var, values=(val,))
+            Log.i(f"Added {var}!")
 
     def remove_symbol(self):
         pass
@@ -112,6 +118,11 @@ class LOLCodeInterpreter:
         self.console.insert(END, str)
         self.console["state"] = "disable"
 
+    def clear_console(self):
+        self.console["state"] = "normal"
+        self.console.delete('1.0', END)
+        self.console["state"] = "disable"
+
     # Could've been used to capture inputs directly from the terminal
     # def capture_input(self, chr):
     #     self.console["state"] = "normal"
@@ -128,11 +139,11 @@ class LOLCodeInterpreter:
     #     self.console.insert(END, console_contents)
     #     self.console["state"] = "disable"
 
-    def cin(self):
+    def cin(self, message="INPUT"):
         '''
         Used by `GIMMEH`; called when user input is needed
         '''
-        answer = simpledialog.askstring("GIMMEH", "Enter input", 
+        answer = simpledialog.askstring("GIMMEH", message, 
                                         parent=self.root)
         
         print(f"GOT: {answer}")
@@ -149,24 +160,20 @@ class LOLCodeInterpreter:
             self.symbol_table.delete(child)
 
         # Clear console
-        self.console.delete('1.0', END)
+        self.clear_console()
 
         # Feed source code to lexer
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
 
-        print("TOKENS:", tokens)
-
+        # print("TOKENS:", tokens)
         self.parser = Parser(self)
         self.parser.set_tokens(tokens)
 
-        self.parser.start()
+        self.parser.parse()
 
-        for token in tokens:             
-            if token.get_desc() not in ("Whitespace", "Newline"): 
-                self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
-            else:
-                self.symbol_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
+        for token in tokens:
+            self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()
