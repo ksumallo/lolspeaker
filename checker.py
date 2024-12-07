@@ -77,7 +77,7 @@ class CastToUnknownTypeError(Error):
     def __init__(self, current, _from, _to, val='?'):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\CastToUknownTypeError: Trying to cast {_from} to unknown type {_to} (Value: {val})"
+        self.message = f"At line {self.line}, col {self.col}:\n\CastToUnknownTypeError: Trying to cast {_from} to unknown type {_to} (Value: {val})"
         super().__init__(self.message)
 
 class IllegalDeclareError(Error):

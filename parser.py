@@ -595,7 +595,7 @@ class Parser:
         for i in range(self._get_loop(label), len(self.tokens)):
             if self.tokens[i].lexeme == "IM OUTTA YR":
                 if self.tokens[i+1].lexeme == label:
-                    end = i+2 # Skip IM OUTTA YR and <expr>
+                    end = i + 2 # Skip IM OUTTA YR <label>
                     break
 
         if end == None: raise LoopUnclosedError(current=self.current, label=label)
@@ -625,10 +625,8 @@ class Parser:
             Log.d(f"{operation} {label}")
             if operation == "UPPIN":
                 self._set(var, self._get(var) + 1)
-                # self.vars[var] += 1
             elif operation == "NERFIN":
                 self._set(var, self._get(var) - 1)
-                # self.vars[var] -= 1
 
             # Reset cursor to loop start
             self.seek(self._get_loop(label))
@@ -716,9 +714,8 @@ class Parser:
 
         # Set JMP flag
         self.flags["JMPOUT"] = True
-
         return True
-
+    
 # MAIN
 # tokens = Lexer(open("project-testcases/05_bool.lol", "r")).get_tokens()
 

@@ -86,7 +86,12 @@ class LOLCodeInterpreter:
         self.root.mainloop()
 
     def add_symbol(self, var, val):
-        self.symbol_table.insert('', END, text=var, values=(val,))
+        try:
+            self.symbol_table.item(var, values=(val,))
+            Log.i(f"Updated {var}!")
+        except:
+            self.symbol_table.insert('', END, iid=var, text=var, values=(val,))
+            Log.i(f"Added {var}!")
 
     def remove_symbol(self):
         pass
