@@ -4,6 +4,7 @@ import re
 class Pattern:
     KEYWORD = r"\b(HAI|KTHXBYE|WAZZUP|BUHBYE|I HAS A|ITZ\b|R|AN|MAEK|A|IS NOW A|VISIBLE|GIMMEH|O RLY\?|YA RLY|NO WAI|MEBBE|NO WAI|OIC|WTF\?|OMG|OMGWTF|IM IN YR|UPPIN|NERFIN|YR|TIL|WILE|IM OUTTA YR|HOW IZ I|IF U SAY SO|GTFO|FOUND YR|I IZ|MKAY|NUMBR|NUMBAR|YARN|TROOF|NOOB)"
     OPERATOR = r"\b(SUM OF|DIFF OF|PRODUKT OF|QUOSHUNT OF|MOD OF|BIGGR OF|SMALLR OF|BOTH OF|EITHER OF|WON OF|NOT|ANY OF|ALL OF|BOTH SAEM|DIFFRINT|SMOOSH|MAEK)"
+    TYPE = r"\b(NUMBR|NUMBAR|TROOF|YARN|NOOB)"
     
     CONCAT = r"\+"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
@@ -13,17 +14,18 @@ class Pattern:
     TROOF = r"\b(WIN|FAIL)\b"
     NEWLINE = r"(\s*\n\s*|\.\.\.)"
     WHITESPACE = r" |\t"
-    YARN_DELIMITER = r"\""
     COMMENT_SINGLE = r"BTW [^\n]*"
     COMMENT_MULTI = r"OBTW\s(.|\n)*\sTLDR"
 
 class Token:
     KEYWORD = "KEYWORD"
-    IDENTIFIER = "IDENTIFIER"
-    CONCAT = "CONCAT"
     OPERATOR = "OPERATOR"
-    NUMBR = "NUMBR"
+    TYPE = "TYPE"
+
+    CONCAT = "CONCAT"
+    IDENTIFIER = "IDENTIFIER"
     NUMBAR = "NUMBAR"
+    NUMBR = "NUMBR"
     YARN = "YARN"
     TROOF = "TROOF"
     NEWLINE = "NEWLINE"
@@ -38,6 +40,7 @@ class Token:
         (Pattern.WHITESPACE, WHITESPACE),
         (Pattern.NEWLINE, NEWLINE),
         (Pattern.CONCAT, CONCAT),
+        (Pattern.TYPE, TYPE),
         (Pattern.OPERATOR, OPERATOR),
         (Pattern.KEYWORD, KEYWORD),
         (Pattern.TROOF, TROOF),
@@ -80,7 +83,8 @@ descriptions = {
     Token.IDENTIFIER: "Identifier",
     Token.COMMENT_SINGLE: "Single-line comment",
     Token.COMMENT_MULTI: "Multiline comment",
-    "TYPE Literal": "Type identifier",
+    Token.NEWLINE: "Line break",
+    Token.TYPE: "Type identifier",
     "<identifier>": "Variable, function, or loop name",
     "HAI": "Start of program",
     "KTHXBYE": "End of program",

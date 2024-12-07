@@ -180,13 +180,10 @@ class Parser:
                     return not bool(op1)
                 
                 case "MAEK":
-                    pass
-                    # # TODO Implement this
-                    # op1 = self.cast(op1, "TROOF")
-                    # target = self.expect(Token.KEYWORD)
-                    # result = self.cast()
-                    # self._set("IT", 0)
-                    # return not bool(op1)
+                    target = self.expect(Token.TYPE)
+                    result = self.cast(op1, target)
+                    self._set("IT", result)
+                    return result
                 
                 case "ANY OF" | "ALL OF":
                     operands = []
@@ -273,7 +270,6 @@ class Parser:
     def statement(self):
         # Create a branch for everyn statement ↓↓↓
         Log.i(f"Got statement: {self.current}")
-        sleep(0.05)
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
@@ -341,27 +337,30 @@ class Parser:
         match target:
             case "TROOF":
                 return bool(val)
+            
             case "NUMBR":
                 try:
-                    i = int(val)
-                    return i
-                except:
-                    return float(val)
+                    return int(val)
+                except ValueError:
+                    raise CastError(self.current, self.typeof(val), target, val)
+                
             case "NUMBAR":
-                return float(val)
+                try:
+                    return float(val)
+                except ValueError:
+                    raise CastError(self.current, self.typeof(val), target, val)
+                
             case "YARN":
-                if val == None:
-                    return "(nil)"
-                elif isinstance(val, bool):
-                    return "WIN" if val else "FAIL"
-                elif isinstance(val, float):
-                    return "%.2f" % val
-                elif isinstance(val, int):
-                    return str(val)
-                else: 
-                    return str(val)
+                match self.typeof(val):
+                    case "NOOB":
+                        return "NOOB"
+                    case "TROOF":
+                        return "WIN" if val else "FAIL"
+                    case "NUMBR"| "NUMBAR" | "YARN":
+                        return str(val)
+                    
             case _:
-                return "WAHHH"
+                raise CastToUnknownTypeError(self.current, self.typeof(val), target, val)
     
     # def cast(self, val=None, target=None):
     #     if val != None and target != None:
@@ -575,16 +574,16 @@ class Parser:
     
     def loop(self):
         label = self.expect(Token.IDENTIFIER)
-        operation = self.expect(Token.KEYWORD)
 
+        operation = self.expect(Token.KEYWORD)
         if operation not in ("UPPIN", "NERFIN"): 
-            raise SyntaxError(current=self.current.lexeme, expected="UPPIN or NERFIN")
+            raise SyntaxError(current=self.current.lexeme, expected="'UPPIN' or 'NERFIN'")
 
         self.expect(Token.KEYWORD, "YR")
 
         var = self.expect(Token.IDENTIFIER)
-        cond = self.expect(Token.KEYWORD, required=False)
 
+        cond = self.expect(Token.KEYWORD)
         if cond not in ("TIL", "WILE"):
             raise SyntaxError(current=self.current.lexeme, expected="TIL or WILE")
         

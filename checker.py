@@ -2,9 +2,9 @@ class Error(Exception):
     _gui = None
 
     def __init__(self, message):
-        super().__init__(self.message)
-        if Error._gui:
-            Error._gui.cout(self.message)
+        super().__init__(message)
+        if Error._gui != None:
+            Error._gui.cout(message)
 
     @staticmethod
     def set_cout(cout):
@@ -71,6 +71,13 @@ class CastError(Error):
         self.line = current.line
         self.col = current.col
         self.message = f"At line {self.line}, col {self.col}:\n\CastError: Cannot cast {_from} to {_to} (Value: {val})"
+        super().__init__(self.message)
+
+class CastToUnknownTypeError(Error):
+    def __init__(self, current, _from, _to, val='?'):
+        self.line = current.line
+        self.col = current.col
+        self.message = f"At line {self.line}, col {self.col}:\n\CastToUknownTypeError: Trying to cast {_from} to unknown type {_to} (Value: {val})"
         super().__init__(self.message)
 
 class IllegalDeclareError(Error):
