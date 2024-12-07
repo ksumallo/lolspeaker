@@ -1,10 +1,11 @@
 HAI
+
     WAZZUP
         I HAS A name
         I HAS A num1
         I HAS A num2
     BUHBYE
-
+    
     HOW IZ I addNum YR x AN YR y
         FOUND YR SUM OF x AN y
     IF U SAY SO
@@ -28,8 +29,9 @@ HAI
     I IZ printName YR name
     VISIBLE IT
 
-    I IZ printNum YR SUM OF 100 AN 2
-    BTW I IZ printNum YR SUM OF x AN 2
+    OBTW 9 here was supposed to be 'x' 
+    but it throws an UndeclaredVariable error TLDR
+    I IZ printNum YR SUM OF 9 AN 2
     VISIBLE IT
 
 KTHXBYE

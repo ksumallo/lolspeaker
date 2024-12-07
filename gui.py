@@ -134,7 +134,7 @@ class LOLCodeInterpreter:
     #     self.console.insert(END, console_contents)
     #     self.console["state"] = "disable"
 
-    def cin(self, message="Enter input"):
+    def cin(self, message="INPUT"):
         '''
         Used by `GIMMEH`; called when user input is needed
         '''

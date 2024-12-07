@@ -14,7 +14,7 @@ class SyntaxError(Error):
     def __init__(self, current, expected):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\tSyntaxError: Expected {expected}, but got {current.lexeme}"
+        self.message = f"At line {self.line}, col {self.col}:\n\tSyntaxError: Expected '{expected}', but got {repr(current.lexeme)}"
         super().__init__(self.message)
 
 class VariableError(Error):

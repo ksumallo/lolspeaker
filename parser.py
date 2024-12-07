@@ -137,18 +137,25 @@ class Parser:
     #-----------------------------------------------------------------------------------'''
 
     def parse(self):
+        "Call this function to begin parsing"
         self._set("IT", 0)
         self.program()
 
     def program(self):
+        while self.expect(Token.NEWLINE, required=False):
+            pass
+
         self.expect(Token.KEYWORD, "HAI")
         self.expect(Token.NUMBAR, required=False)
+        self.linebreak()
 
         # Variable Declarations
         self.expect(Token.KEYWORD, lexeme="WAZZUP")
+        self.linebreak()
         while not self.expect(Token.KEYWORD, lexeme="BUHBYE", required=False):
             self.expect(Token.KEYWORD, "I HAS A")
             self.accept(self.declare, err_msg="Expected assignment statement")
+            self.linebreak()
         
         # Program Body
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
@@ -156,6 +163,12 @@ class Parser:
         
         Log.yell("End.")
         return True
+    
+    def linebreak(self):
+        br = False
+        while has_newline := self.expect(Token.NEWLINE, required=False):
+            br |= has_newline != None
+        return br
 
     def expr(self):
         if operation := self.expect(Token.OPERATOR, required=False):
@@ -193,9 +206,9 @@ class Parser:
                     operands = [op1]
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", required=False):
-                        value = self.accept(self.expr)
-                        value = self.cast(op, "YARN")
-                        operands.append(value)
+                        op = self.accept(self.expr)
+                        op = self.cast(op, "YARN")
+                        operands.append(op)
                         
                     return "".join(operands)
             
@@ -304,13 +317,16 @@ class Parser:
         if self.expect(Token.KEYWORD, lexeme="FOUND YR", required=False):
             self.accept(self.ret, err_msg="Error occured while in FOUND YR")
             
-        return True
+        return self.linebreak()
 
     def print(self):
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         operands = [self.cast(first, "YARN")]
                     
-        while self.expect(Token.CONCAT, lexeme="+", required=False):
+        while not self.linebreak():
+            if self.expect(Token.CONCAT, Token.KEYWORD) not in ("+", "AN"):
+                raise SyntaxError(self.current, "'+' or 'AN'")
+            
             op = self.accept(self.expr, err_msg="Expected: <expr>")
             operands.append(self.cast(op, "YARN"))
 
@@ -421,9 +437,11 @@ class Parser:
             self._top_of_stack()["var_types"][var] = _type
             self.gui.add_symbol(var, self.cast(val, "YARN"))
 
-        # self.vars[var] = val
-        # self.var_types[var] = _type
         Log.i(f"SET: {var} = {val}")
+
+    def _set_loop(self, label, val):
+        self._top_of_stack()["loops"][label] = val
+        Log.i(f"SET LOOP: {label} = {val}")
 
     def _get(self, var):
         if var == "IT":
@@ -450,6 +468,13 @@ class Parser:
         
         # Log.i(f"GET: {var} => {self.funcs[var]}")
         return self.funcs[fun]
+    
+    def _del_loop(self, label):
+        if label not in self._top_of_stack()["loops"]:
+            raise LoopLabelError(current=self.current, label=label)
+        
+        Log.i(f"DEL LOOP: {label}")
+        del self._top_of_stack()["loops"][label]
     
     def assign(self):
         var = self.expect(Token.IDENTIFIER)
@@ -553,7 +578,7 @@ class Parser:
         operation = self.expect(Token.KEYWORD)
 
         if operation not in ("UPPIN", "NERFIN"): 
-            raise SyntaxError(current=self.current, expected="UPPIN or NERFIN")
+            raise SyntaxError(current=self.current.lexeme, expected="UPPIN or NERFIN")
 
         self.expect(Token.KEYWORD, "YR")
 
@@ -561,14 +586,14 @@ class Parser:
         cond = self.expect(Token.KEYWORD, required=False)
 
         if cond not in ("TIL", "WILE"):
-            raise SyntaxError(current=self.current, expected="TIL or WILE")
+            raise SyntaxError(current=self.current.lexeme, expected="TIL or WILE")
         
         # Jump to the conditional
-        self.vars[label] = int(self.cursor)
+        self._set_loop(label, int(self.cursor))
         end = None
 
         # Find the index of the IM OUTTA YR token
-        for i in range(self.vars[label], len(self.tokens)):
+        for i in range(self._get_loop(label), len(self.tokens)):
             if self.tokens[i].lexeme == "IM OUTTA YR":
                 if self.tokens[i+1].lexeme == label:
                     end = i+2 # Skip IM OUTTA YR and <expr>
@@ -578,7 +603,7 @@ class Parser:
 
         # Execute loop
         while True:
-            # Evaluate condition
+            # CONDITIONAL
             cond_result = self.accept(self.expr)
 
             if cond == "TIL" and cond_result:
@@ -588,28 +613,29 @@ class Parser:
                 self.seek(end)
                 break
 
-            # Execute loop body
+            # LOOP BODY
             while not self.expect(Token.KEYWORD, lexeme="IM OUTTA YR", consume=False, required=False):
                 self.accept(self.statement)
 
                 # Handle GTFO
-                if self.flags["BRK"]:
-                    self.flags["BRK"] = False
+                if self.flags["JMPOUT"]:
+                    self.flags["JMPOUT"] = False
                     break
             
-            # Modifier application
+            # INCREMENT/DECREMENT
             Log.d(f"{operation} {label}")
             if operation == "UPPIN":
-                self.vars[var] += 1
+                self._set(var, self._get(var) + 1)
+                # self.vars[var] += 1
             elif operation == "NERFIN":
-                self.vars[var] -= 1
+                self._set(var, self._get(var) - 1)
+                # self.vars[var] -= 1
 
             # Reset cursor to loop start
-            self.seek(self.vars[label])
+            self.seek(self._get_loop(label))
 
         Log.yell("Finished looping!")
-        if self._get(label):
-            del self.vars[label]
+        self._del_loop(label)
 
         return True
     
