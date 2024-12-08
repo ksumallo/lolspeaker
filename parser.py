@@ -4,21 +4,7 @@ from time import sleep
 from checker import *
 # from syntax_tree import AST, Node
 
-Log.show(True)
-
-# class Error:
-#     _gui = None
-
-#     @staticmethod
-#     def set_output_stream(gui):
-#         Error._gui = gui
-
-#     @staticmethod
-#     def throw(err: Exception, args):
-#         Error._gui.cout(f"=============== [ EXECUTION STOPPED ] ===============\n")
-#         e = err(args)
-#         Error._gui.cout(f"{e.message}")
-#         raise e
+Log.show(False)
 
 class Parser:
     def __init__(self, gui):
@@ -31,20 +17,30 @@ class Parser:
             'JMPOUT': False
         }
 
-        # Runtime 
-        self.vars = {}
-        self.var_types = {}
-        self.loops = {}
-        self.funcs = {}
-
         _global_scope = {
             "vars": {},
-            "var_types": {},
             "loops": {},
             "funcs": {},
         }
 
         self.stack = [_global_scope]
+
+        self.operations = {
+            "SUM OF":       lambda a, b: a + b,
+            "DIFF OF":      lambda a, b: a - b,
+            "PRODUKT OF":   lambda a, b: a * b,
+            "QUOSHUNT OF":  lambda a, b: a / b,
+            "MOD OF":       lambda a, b: a % b,
+            "BIGGR OF":     lambda a, b: max(a, b),
+            "SMALLR OF":    lambda a, b: min(a, b),
+            "NOT":          lambda a: not a
+        }
+
+        self.bool_operations = {
+            "BOTH OF":      lambda a, b: a & b,
+            "EITHER OF":    lambda a, b: a | b,
+            "WON OF":       lambda a, b: a ^ b
+        }
 
         Error.set_cout(gui)
 
@@ -123,15 +119,14 @@ class Parser:
     def accept(self, abstraction, err_msg=f"Unexpected non-terminal!"):
         _accept = abstraction()
 
-        # Exempt expr() since it is allowed to return None (NOOB)
+        # Exempt expr() since it is allowed to return 'None' as (NOOB)
         if abstraction != self.expr:
             if _accept == None:
                 Log.e(err_msg)
                 raise UnknownError(current=self.current)
         else:
+            # Implicitly assign to IT the resulting value of an expression
             self._set("IT", _accept)
-        
-        # Implicitly assign to IT the resulting value of an expression
         
         return _accept
     
@@ -168,6 +163,7 @@ class Parser:
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             self.accept(self.statement, err_msg="Statement not recognized")
         
+        self.gui.cout("======= EXECUTION FINISHED =======")
         Log.yell("End.")
         return True
     
@@ -176,10 +172,13 @@ class Parser:
         while has_newline := self.expect(Token.NEWLINE, required=False):
             br |= has_newline != None
         return br
-
+    
     def expr(self):
+        '''
+        Not calling expr() using accept() by passes the assignment to IT after evaluation
+        '''
         if operation := self.expect(Token.OPERATOR, required=False):
-            op1 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
+            op1 = self.expr
             
             match operation:
                 case "NOT":
@@ -197,8 +196,8 @@ class Parser:
                     
                     while not self.expect(Token.KEYWORD, lexeme="MKAY", required=False):
                         self.expect(Token.KEYWORD, lexeme="AN")
-                        op = self.accept(self.expr, err_msg="Expected: bool or expression")
-                        # op = self.cast(op, "TROOF")
+                        op = self.expr
+                        op = self._cast(op, "TROOF")
                         operands.append(op)
 
                     if operation == "ALL OF":
@@ -220,39 +219,52 @@ class Parser:
 
             op2 = self.accept(self.expr, err_msg=f"Expected: <expr>, got {self.current.lexeme}")
 
-            op1, op2 = float(op1), float(op2)
+            if operation == "BOTH SAEM":
+                return op1 == op2
+            elif operation == "DIFFRINT":
+                return op1 != op2
             
-            # Arithmetic Operations
-            match operation:
-                case "BOTH SAEM":
-                    return op1 == op2
-                case "DIFFRINT":
-                    return op1 != op2
-                case "SUM OF":
-                    return op1 + op2
-                case "DIFF OF":
-                    return op1 - op2
-                case "PRODUKT OF":
-                    return op1 * op2
-                case "QUOSHUNT OF":
-                    return op1 / op2
-                case "MOD OF":
-                    return op1 % op2
-                case "BIGGR OF":
-                    return max(op1, op2)
-                case "SMALLR OF":
-                    return min(op1, op2)
-                
-            op1, op2 = bool(op1), bool(op2)
+            if self.typeof(op1) not in ("NUMBR", "NUMBAR"):
+                op1 = self._cast(op1, "NUMBR", safe=True)
+
+            if self.typeof(op2) not in ("NUMBR", "NUMBAR"):
+                op2 = self._cast(op2, "NUMBR", safe=True)
+
+            if operation in self.operations:
+                return self.operations[operation](op1, op2)
             
+            op1, op2 = self._cast(op1, "TROOF"), self._cast(op2, "TROOF")
+            return self.bool_operations[operation](op1, op2)
+            
+            # Binary Operations
+            # match operation:
+            #     case "BOTH SAEM":
+            #         return op1 == op2
+            #     case "DIFFRINT":
+            #         return op1 != op2
+            #     case "SUM OF":
+            #         return op1 + op2
+            #     case "DIFF OF":
+            #         return op1 - op2
+            #     case "PRODUKT OF":
+            #         return op1 * op2
+            #     case "QUOSHUNT OF":
+            #         return op1 / op2
+            #     case "MOD OF":
+            #         return op1 % op2
+            #     case "BIGGR OF":
+            #         return max(op1, op2)
+            #     case "SMALLR OF":
+            #         return min(op1, op2)
+
             # Boolean Operations
-            match operation:
-                case "BOTH OF":
-                    return op1 & op2
-                case "EITHER OF":
-                    return op1 | op2
-                case "WON OF":
-                    return op1 ^ op2
+            # match operation:
+            #     case "BOTH OF":
+            #         return op1 & op2
+            #     case "EITHER OF":
+            #         return op1 | op2
+            #     case "WON OF":
+            #         return op1 ^ op2
 
         if got := self.expect(Token.NUMBAR, required=False):
             return float(got) 
@@ -277,7 +289,6 @@ class Parser:
     def statement(self):
         # Create a branch for everyn statement ↓↓↓
         Log.i(f"Got statement: {self.current}")
-        sleep(0.1)
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
@@ -293,11 +304,10 @@ class Parser:
         # <varident> R <expr>
         if var := self.expect(Token.IDENTIFIER, required=False):
             self._set("IT", var)
-            if self.expect(Token.KEYWORD, required=False) in ("R", "IS NOW A"):
+            if self.expect(Token.KEYWORD, consume=False, required=False) in ("R", "IS NOW A"):
                 self.accept(self.assign, err_msg=f"Error casting/assigning value to variable")
             else:
-                val = self.accept(self.expr, err_msg=f"Error parsing expression")
-                self._set("IT", var)
+                self.accept(self.expr, err_msg=f"Error parsing expression")
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
             self.accept(self.print, err_msg="Error occurred while in VISIBLE")
@@ -334,13 +344,17 @@ class Parser:
     def print(self):
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
         operands = [self._cast(first, "YARN")]
-                    
-        while not self.linebreak():
-            if self.expect(Token.CONCAT, Token.KEYWORD) not in ("+", "AN"):
-                raise SyntaxError(self.current, "'+' or 'AN'")
-            
+
+        more = True
+        while more:
             op = self.accept(self.expr, err_msg="Expected: <expr>")
-            operands.append(self._cast(op, "YARN"))
+            converted = self._cast(op, "YARN")
+            operands.append(converted)
+            
+            if self.linebreak():
+                more = False
+            elif self.expect(Token.CONCAT, Token.KEYWORD) not in ("+", "AN"):
+                raise SyntaxError(self.current, "'+' or 'AN'")
 
         buffer = "".join(operands) + '\n'
         self.gui.cout(buffer)
@@ -349,7 +363,7 @@ class Parser:
         return True
     
     # Not an abstraction
-    def _cast(self, val, target, safe=False):
+    def _cast(self, val, target):
         match target:
             case "TROOF":
                 if self.typeof(val) == "YARN":
@@ -361,22 +375,20 @@ class Parser:
                 try:
                     return int(val)
                 except ValueError:
-                    if safe: 
-                        return val
-                    raise CastError(self.current, self.typeof(val), target, val)
+                    try:
+                        return float(val)
+                    except ValueError:
+                        raise CastError(self.current, self.typeof(val), target, val)
                 
             case "NUMBAR":
                 try:
                     return float(val)
                 except ValueError:
                     # Try parsing to int()
-                    if safe:
-                        try:
-                            return int(val)
-                        except ValueError:
-                            if safe:
-                                return val
-                    raise CastError(self.current, self.typeof(val), target, val)
+                    try:
+                        return int(val)
+                    except ValueError:
+                        raise CastError(self.current, self.typeof(val), target, val)
                 
             case "YARN":
                 match self.typeof(val):
@@ -389,48 +401,13 @@ class Parser:
                     
             case _:
                 raise CastToUnknownTypeError(self.current, self.typeof(val), target, val)
-    
-    def cast(self):
-        pass
-        
-    # def recast(self): # , val=None, target=None
-    #     var = self.expect(Token.IDENTIFIER)
-    #     match self.typeof()
-    #     match target:
-    #         case "TROOF":
-    #             return bool(val)
-    #         case "NUMBR":
-    #             return int(val)
-    #         case "NUMBAR":
-    #             try:
-    #                 i = int(val)
-    #                 return i
-    #             except:
-    #                 return float(val)
-    #         case "YARN":
-    #             if val == None:
-    #                 return "(nil)"
-    #             elif isinstance(val, bool):
-    #                 return "WIN" if val else "FAIL"
-    #             elif isinstance(val, float):
-    #                 return "%.2f" % val
-    #             elif isinstance(val, int):
-    #                 return str(val)
-    #             else: 
-    #                 return str(val)
-    #         case _:
-    #             return "WAHHH"
 
     def _set(self, var, val):
-        _type = self.typeof(val)
-
         if var == "IT":
             self.stack[0]["vars"][var] = val
-            self.stack[0]["var_types"][var] = _type
             self.gui.add_symbol(var, self._cast(val, "YARN"))
         else:
             self._top_of_stack()["vars"][var] = val
-            self._top_of_stack()["var_types"][var] = _type
             self.gui.add_symbol(var, self._cast(val, "YARN"))
 
         Log.i(f"SET: {var} = {val}")
@@ -457,12 +434,12 @@ class Parser:
         # Log.i(f"GET: {var} => {self.loops[var]}")
         return self._top_of_stack()["loops"][label]
     
-    def _get_func(self, fun):
-        if fun not in self.funcs:
-            raise FunctionUndefinedError(current=self.current, identifier=fun)
+    def _get_func(self, func):
+        if func not in self.stack[0]["funcs"]:
+            raise FunctionUndefinedError(current=self.current, identifier=func)
         
         # Log.i(f"GET: {var} => {self.funcs[var]}")
-        return self.funcs[fun]
+        return self.stack[0]["funcs"][func]
     
     def _del_loop(self, label):
         if label not in self._top_of_stack()["loops"]:
@@ -503,19 +480,18 @@ class Parser:
     def typeof(self, value):
         if value == None:
             return "NOOB"
-        elif isinstance(value, str):
-            return "YARN"
+        elif isinstance(value, bool):
+            return "TROOF"
         elif isinstance(value, int):
             return "NUMBR"
         elif isinstance(value, float):
             return "NUMBAR"
-        elif isinstance(value, bool):
-            return "TROOF"
+        elif isinstance(value, str):
+            return "YARN"
         
     def input(self):
         var = self.expect(Token.IDENTIFIER)
         _input = self.gui.cin()
-
         self._set(var, _input)
 
         return True
@@ -647,7 +623,6 @@ class Parser:
             "name": funcident,
             "jmp": -1,
             "vars": {},
-            "var_types": {},
             "loop": {},
             "ret": -1
         }
@@ -722,10 +697,11 @@ class Parser:
         case_matched = False  # Flag to track if a case is matched
         # gtfoed = False
 
-        # Get all cases
+        # Get all cases (OMG)
         default = None
         cases = []
 
+        # Scan the entire WTF?...OIC block find jump points (OMG, OMGWTF)
         while not self.expect(Token.KEYWORD, lexeme="OIC", consume=False, required=False):
             Log.w(f"Current token: {self.current} (pos = {self.cursor})")
 
@@ -734,13 +710,10 @@ class Parser:
                     cases.append(int(self.cursor))
                 case "OMGWTF": 
                     default = int(self.cursor)
-            
-            Log.w("Nexting")
             self.next()
-        
-        end = int(self.cursor) + 1
 
-        cond = self._get("IT")
+        end = int(self.cursor) + 1      # Index of OIC
+        cond = self._get("IT")          # Store value needed to match
 
         # If we encounter OMG, we are now in a case block
         for case in cases:

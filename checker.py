@@ -42,7 +42,7 @@ class LoopUnclosedError(Error):
     def __init__(self, current, label):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\LoopUnclosedError: Loop '{label}' has no matching IM OUTTA YR"
+        self.message = f"At line {self.line}, col {self.col}:\n\tLoopUnclosedError: Loop '{label}' has no matching IM OUTTA YR"
         super().__init__(self.message)
 
 class ArgumentMismatchError(Error):
@@ -56,7 +56,7 @@ class ExpressionError(Error):
     def __init__(self, current):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\ExpressionError: Encountered error while parsing expression"
+        self.message = f"At line {self.line}, col {self.col}:\n\tExpressionError: Encountered error while parsing expression"
         super().__init__(self.message)
 
 class UnknownError(Error):
@@ -70,14 +70,14 @@ class CastError(Error):
     def __init__(self, current, _from, _to, val='?'):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\CastError: Cannot cast {_from} to {_to} (Value: {val})"
+        self.message = f"At line {self.line}, col {self.col}:\n\tCastError: Cannot cast {_from} to {_to} (Value: {val})"
         super().__init__(self.message)
 
 class CastToUnknownTypeError(Error):
     def __init__(self, current, _from, _to, val='?'):
         self.line = current.line
         self.col = current.col
-        self.message = f"At line {self.line}, col {self.col}:\n\CastToUnknownTypeError: Trying to cast {_from} to unknown type {_to} (Value: {val})"
+        self.message = f"At line {self.line}, col {self.col}:\n\tCastToUnknownTypeError: Trying to cast {_from} to unknown type {_to} (Value: {val})"
         super().__init__(self.message)
 
 class IllegalDeclareError(Error):
