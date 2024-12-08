@@ -28,10 +28,8 @@ HAI
     GIMMEH name
     I IZ printName YR name
     VISIBLE IT
-
-    OBTW 9 here was supposed to be 'x' 
-    but it throws an UndeclaredVariable error TLDR
-    I IZ printNum YR SUM OF 9 AN 2
+    
+    I IZ printNum YR SUM OF x AN 2
     VISIBLE IT
 
 KTHXBYE

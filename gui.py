@@ -123,22 +123,6 @@ class LOLCodeInterpreter:
         self.console.delete('1.0', END)
         self.console["state"] = "disable"
 
-    # Could've been used to capture inputs directly from the terminal
-    # def capture_input(self, chr):
-    #     self.console["state"] = "normal"
-    #     console_contents = self.console.get("1.0",'end-1c')
-    #     print("CONTENTS:", console_contents)
-    #     if chr.char == '\x08':
-    #         self.buffer = self.buffer[:-1]
-    #     else:
-    #         self.buffer += chr.char
-
-    #     console_contents += self.buffer
-        
-    #     self.console.delete(1.0, END)
-    #     self.console.insert(END, console_contents)
-    #     self.console["state"] = "disable"
-
     def cin(self, message="INPUT"):
         '''
         Used by `GIMMEH`; called when user input is needed
