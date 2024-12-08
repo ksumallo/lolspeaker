@@ -148,7 +148,6 @@ class LOLCodeInterpreter:
         
         print(f"GOT: {answer}")
         return answer
-        
 
     def execute(self):
         # Clear lexeme table
@@ -165,15 +164,15 @@ class LOLCodeInterpreter:
         # Feed source code to lexer
         code = self.editor.get("1.0", 'end-1c')
         tokens = Lexer(code).get_tokens()
+        
+        for token in tokens:
+            self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 
         # print("TOKENS:", tokens)
         self.parser = Parser(self)
         self.parser.set_tokens(tokens)
 
         self.parser.parse()
-
-        for token in tokens:
-            self.lexeme_table.insert('', END, text=token.get_lexeme(), values=(token.get_desc(),))
 
 interpreter = LOLCodeInterpreter()
 interpreter.start()

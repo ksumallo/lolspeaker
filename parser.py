@@ -122,9 +122,16 @@ class Parser:
     # Used for expecting non-terminals
     def accept(self, abstraction, err_msg=f"Unexpected non-terminal!"):
         _accept = abstraction()
-        if _accept == None:
-            Log.e(err_msg)
-            raise UnknownError(current=self.current)
+
+        # Exempt expr() since it is allowed to return None (NOOB)
+        if abstraction != self.expr:
+            if _accept == None:
+                Log.e(err_msg)
+                raise UnknownError(current=self.current)
+        else:
+            self._set("IT", _accept)
+        
+        # Implicitly assign to IT the resulting value of an expression
         
         return _accept
     
@@ -176,12 +183,12 @@ class Parser:
             
             match operation:
                 case "NOT":
-                    op1 = self.cast(op1, "TROOF")
+                    op1 = self._cast(op1, "TROOF")
                     return not bool(op1)
                 
                 case "MAEK":
                     target = self.expect(Token.TYPE)
-                    result = self.cast(op1, target)
+                    result = self._cast(op1, target)
                     self._set("IT", result)
                     return result
                 
@@ -204,7 +211,7 @@ class Parser:
                     
                     while self.expect(Token.KEYWORD, lexeme="AN", required=False):
                         op = self.accept(self.expr)
-                        op = self.cast(op, "YARN")
+                        op = self._cast(op, "YARN")
                         operands.append(op)
                         
                     return "".join(operands)
@@ -270,6 +277,7 @@ class Parser:
     def statement(self):
         # Create a branch for everyn statement ↓↓↓
         Log.i(f"Got statement: {self.current}")
+        sleep(0.1)
         if self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             return None
 
@@ -283,8 +291,13 @@ class Parser:
             self._set("IT", it)
 
         # <varident> R <expr>
-        if self.expect(Token.IDENTIFIER, consume=False, required=False):
-            self.accept(self.assign, err_msg=f"Error assigning value to variable")
+        if var := self.expect(Token.IDENTIFIER, required=False):
+            self._set("IT", var)
+            if self.expect(Token.KEYWORD, required=False) in ("R", "IS NOW A"):
+                self.accept(self.assign, err_msg=f"Error casting/assigning value to variable")
+            else:
+                val = self.accept(self.expr, err_msg=f"Error parsing expression")
+                self._set("IT", var)
         
         if self.expect(Token.KEYWORD, lexeme="VISIBLE", required=False):
             self.accept(self.print, err_msg="Error occurred while in VISIBLE")
@@ -299,7 +312,7 @@ class Parser:
             self.accept(self.loop, err_msg="Error occurred while in IM IN YR")
 
         if self.expect(Token.KEYWORD, lexeme="MAEK", required=False):
-            self.accept(self.cast, err_msg="Error occurred while in IM IN YR")
+            self.accept(self._cast, err_msg="Error occurred while in IM IN YR")
             
         if self.expect(Token.KEYWORD, lexeme="GTFO", required=False):
             self.flags["JMPOUT"] = True
@@ -312,19 +325,22 @@ class Parser:
 
         if self.expect(Token.KEYWORD, lexeme="FOUND YR", required=False):
             self.accept(self.ret, err_msg="Error occured while in FOUND YR")
+
+        if self.expect(Token.KEYWORD, lexeme="WTF?", required=False):
+            self.accept(self.switch_case, err_msg="Error occured while in WTF?")
             
         return self.linebreak()
 
     def print(self):
         first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
-        operands = [self.cast(first, "YARN")]
+        operands = [self._cast(first, "YARN")]
                     
         while not self.linebreak():
             if self.expect(Token.CONCAT, Token.KEYWORD) not in ("+", "AN"):
                 raise SyntaxError(self.current, "'+' or 'AN'")
             
             op = self.accept(self.expr, err_msg="Expected: <expr>")
-            operands.append(self.cast(op, "YARN"))
+            operands.append(self._cast(op, "YARN"))
 
         buffer = "".join(operands) + '\n'
         self.gui.cout(buffer)
@@ -333,21 +349,33 @@ class Parser:
         return True
     
     # Not an abstraction
-    def cast(self, val, target):
+    def _cast(self, val, target, safe=False):
         match target:
             case "TROOF":
+                if self.typeof(val) == "YARN":
+                    if val == "WIN" or val == "FAIL":
+                        return bool(val == "WIN")
                 return bool(val)
             
             case "NUMBR":
                 try:
                     return int(val)
                 except ValueError:
+                    if safe: 
+                        return val
                     raise CastError(self.current, self.typeof(val), target, val)
                 
             case "NUMBAR":
                 try:
                     return float(val)
                 except ValueError:
+                    # Try parsing to int()
+                    if safe:
+                        try:
+                            return int(val)
+                        except ValueError:
+                            if safe:
+                                return val
                     raise CastError(self.current, self.typeof(val), target, val)
                 
             case "YARN":
@@ -361,6 +389,9 @@ class Parser:
                     
             case _:
                 raise CastToUnknownTypeError(self.current, self.typeof(val), target, val)
+    
+    def cast(self):
+        pass
         
     # def recast(self): # , val=None, target=None
     #     var = self.expect(Token.IDENTIFIER)
@@ -396,11 +427,11 @@ class Parser:
         if var == "IT":
             self.stack[0]["vars"][var] = val
             self.stack[0]["var_types"][var] = _type
-            self.gui.add_symbol(var, self.cast(val, "YARN"))
+            self.gui.add_symbol(var, self._cast(val, "YARN"))
         else:
             self._top_of_stack()["vars"][var] = val
             self._top_of_stack()["var_types"][var] = _type
-            self.gui.add_symbol(var, self.cast(val, "YARN"))
+            self.gui.add_symbol(var, self._cast(val, "YARN"))
 
         Log.i(f"SET: {var} = {val}")
 
@@ -418,7 +449,6 @@ class Parser:
         
         Log.i(f"GET: {var} => {self._top_of_stack()["vars"][var]}")
         return self._top_of_stack()["vars"][var]
-        
     
     def _get_loop(self, label):
         if label not in self._top_of_stack()["loops"]:
@@ -442,12 +472,20 @@ class Parser:
         del self._top_of_stack()["loops"][label]
     
     def assign(self):
-        var = self.expect(Token.IDENTIFIER)
-        self.expect(Token.KEYWORD, lexeme="R")
+        var = self._get("IT")
+        operation = self.expect(Token.KEYWORD)
         
-        value = self.accept(self.expr, err_msg="Expected: <expr>")
-        
-        self._set(var, value)
+        if operation == "R":
+            value = self.accept(self.expr, err_msg="Expected: <expr>")
+            self._set(var, value)
+        elif operation == "IS NOW A":
+            target = self.expect(Token.TYPE)
+            val = self._get(var)
+
+            casted = self._cast(val, target)
+            self._set(var, casted)
+        else:
+            raise SyntaxError(self.current, "'R' or 'IS NOW A'")
         
         return True
     
@@ -474,12 +512,10 @@ class Parser:
         elif isinstance(value, bool):
             return "TROOF"
         
-    # MAEK <var> [A] <type>
-    # <var> IS NOW A <type> (?)
-        
     def input(self):
         var = self.expect(Token.IDENTIFIER)
         _input = self.gui.cin()
+
         self._set(var, _input)
 
         return True
@@ -682,11 +718,75 @@ class Parser:
         self.flags["JMPOUT"] = True
         return True
     
-# MAIN
+    def switch_case(self):
+        case_matched = False  # Flag to track if a case is matched
+        # gtfoed = False
+
+        # Get all cases
+        default = None
+        cases = []
+
+        while not self.expect(Token.KEYWORD, lexeme="OIC", consume=False, required=False):
+            Log.w(f"Current token: {self.current} (pos = {self.cursor})")
+
+            match self.current.lexeme: 
+                case "OMG": 
+                    cases.append(int(self.cursor))
+                case "OMGWTF": 
+                    default = int(self.cursor)
+            
+            Log.w("Nexting")
+            self.next()
+        
+        end = int(self.cursor) + 1
+
+        cond = self._get("IT")
+
+        # If we encounter OMG, we are now in a case block
+        for case in cases:
+            self.seek(case + 1)
+            case_value = self.expr()
+
+            Log.i(f"IT value: {case_value}")
+            if cond == case_value:
+                Log.i(f"Case matched: {case_value} == {cond}")
+                case_matched = True
+                while not self.cursor in cases and self.cursor != default:
+                    # Execute the statements inside the OMG block
+                    self.accept(self.statement)
+
+                    # Handle GTFO
+                    if self.flags["JMPOUT"]:
+                        break
+                self.seek(end)
+
+            if self.flags["JMPOUT"]:
+                self.flags["JMPOUT"] = False
+                Log.d("GTFO encountered, exiting case...")
+                self.seek(end)
+                break
+        
+        if not case_matched and default != None:
+            self.seek(default + 1)
+
+            # If we've reached the OIC keyword, exit the loop
+            while not self.expect(Token.KEYWORD, lexeme="OIC", required=False):
+                # Execute the statements inside the OMGWTF block
+                self.accept(self.statement)
+
+                # Handle GTFO
+                if self.flags["JMPOUT"]:
+                    self.flags["JMPOUT"] = False
+                    Log.d("GTFO encountered, exiting case...")
+                    Log.w(f"OMGWTFCurrent lexeme at END: {self.current.lexeme}")
+                    self.seek(end)
+                    break
+
+        self.linebreak()
+
+        return True
+    
+# --- DEBUG ---
 # tokens = Lexer(open("project-testcases/05_bool.lol", "r")).get_tokens()
-
-# parser = Parser()
-# success = parser.parse()
-
-# # print("Result:", result)
-# Log.d("Parsing completed successfully!")
+# success = Parser().parse()
+# # Log.yell(f"Parsing completed successfully! ({success})")
