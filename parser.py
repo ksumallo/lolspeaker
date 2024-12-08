@@ -163,7 +163,7 @@ class Parser:
         while not self.expect(Token.KEYWORD, lexeme="KTHXBYE", consume=False, required=False):
             self.accept(self.statement, err_msg="Statement not recognized")
         
-        self.gui.cout("======= EXECUTION FINISHED =======")
+        self.gui.cout("\n========= [ Execution Finished ] =========")
         Log.yell("End.")
         return True
     
@@ -178,7 +178,7 @@ class Parser:
         Not calling expr() using accept() by passes the assignment to IT after evaluation
         '''
         if operation := self.expect(Token.OPERATOR, required=False):
-            op1 = self.expr
+            op1 = self.expr()
             
             match operation:
                 case "NOT":
@@ -196,7 +196,7 @@ class Parser:
                     
                     while not self.expect(Token.KEYWORD, lexeme="MKAY", required=False):
                         self.expect(Token.KEYWORD, lexeme="AN")
-                        op = self.expr
+                        op = self.expr()
                         op = self._cast(op, "TROOF")
                         operands.append(op)
 
@@ -225,10 +225,10 @@ class Parser:
                 return op1 != op2
             
             if self.typeof(op1) not in ("NUMBR", "NUMBAR"):
-                op1 = self._cast(op1, "NUMBR", safe=True)
+                op1 = self._cast(op1, "NUMBR")
 
             if self.typeof(op2) not in ("NUMBR", "NUMBAR"):
-                op2 = self._cast(op2, "NUMBR", safe=True)
+                op2 = self._cast(op2, "NUMBR")
 
             if operation in self.operations:
                 return self.operations[operation](op1, op2)
@@ -273,6 +273,12 @@ class Parser:
             return int(got) 
         
         if got := self.expect(Token.YARN, required=False):
+            # Processing special characters
+            got = str(got)
+            got.replace(":)", "\n")
+            got.replace(":>", "\t")
+            got.replace(":\"", "\t")
+            got.replace("::", ":")
             return str(got)
         
         if got := self.expect(Token.TROOF, required=False):
@@ -342,23 +348,28 @@ class Parser:
         return self.linebreak()
 
     def print(self):
-        first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
-        operands = [self._cast(first, "YARN")]
+        # first = self.accept(self.expr, f"Expected literal or <expr>, got {self.current.lexeme}")
+        operands = [] # self._cast(first, "YARN")
 
-        more = True
+        more, endl = True, True
         while more:
             op = self.accept(self.expr, err_msg="Expected: <expr>")
             converted = self._cast(op, "YARN")
             operands.append(converted)
             
-            if self.linebreak():
+            if self.expect(Token.DELIMITER, required=False):
+                self.linebreak()
                 more = False
+                endl = False
+            elif self.linebreak():
+                more = False    
             elif self.expect(Token.CONCAT, Token.KEYWORD) not in ("+", "AN"):
                 raise SyntaxError(self.current, "'+' or 'AN'")
-
-        buffer = "".join(operands) + '\n'
+        
+        endl = '\n' if endl else ''
+        buffer = "".join(operands) + endl
         self.gui.cout(buffer)
-        print(buffer, end='')
+        print(buffer, end=endl)
             
         return True
     

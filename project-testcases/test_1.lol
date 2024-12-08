@@ -1,6 +1,6 @@
 BTW LOLCODE IS ME
 
-HAI 1.2
+HAI
 BTW WAZZUP
 BTW Declare variables here 
 BTW Expressions HAS PREFIKS NOTATION 
@@ -30,12 +30,10 @@ IM IN YR loop UPPIN YR var TIL BOTH SAEM var AN BIGGR OF var AN 10
 IM OUTTA YR loop
 
 IM IN YR outer UPPIN YR i TIL BOTH SAEM i AN 3
-    VISIBLE "GOING IN!" + "j =" + j
     IM IN YR inner UPPIN YR j TIL BOTH SAEM j AN 3
         VISIBLE i + "*" + j + "=" + PRODUKT OF i AN j
     IM OUTTA YR inner
     j R 0
-    VISIBLE "JUST GOT OUT!"
 IM OUTTA YR outer
 
 BTW I HAS A troof  

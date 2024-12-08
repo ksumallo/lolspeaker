@@ -7,12 +7,13 @@ class Pattern:
     TYPE = r"\b(NUMBR|NUMBAR|TROOF|YARN|NOOB)"
     
     CONCAT = r"\+"
+    DELIMITER = r"\!"
     IDENTIFIER = r"\b[a-zA-Z]\w*\b"
     NUMBAR = r"\-?\d+\.\d+"
     NUMBR = r"\-?\d+"
     YARN = r"\"[^\n\"]*\""
     TROOF = r"\b(WIN|FAIL)\b"
-    NEWLINE = r"(\s*\n\s*|\.\.\.)"
+    NEWLINE = r"(\s*\n\s*|\,)"
     WHITESPACE = r" |\t"
     COMMENT_SINGLE = r"BTW [^\n]*"
     COMMENT_MULTI = r"OBTW\s(.|\n)*\sTLDR"
@@ -23,6 +24,7 @@ class Token:
     TYPE = "TYPE"
 
     CONCAT = "CONCAT"
+    DELIMITER = "DELIMITER"
     IDENTIFIER = "IDENTIFIER"
     NUMBAR = "NUMBAR"
     NUMBR = "NUMBR"
@@ -40,6 +42,7 @@ class Token:
         (Pattern.WHITESPACE, WHITESPACE),
         (Pattern.NEWLINE, NEWLINE),
         (Pattern.CONCAT, CONCAT),
+        (Pattern.DELIMITER, DELIMITER),
         (Pattern.TYPE, TYPE),
         (Pattern.OPERATOR, OPERATOR),
         (Pattern.KEYWORD, KEYWORD),
