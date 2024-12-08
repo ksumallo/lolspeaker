@@ -2,8 +2,9 @@ OBTW This program tests an array implementation in LOLCODE
         It uses zero-indexing TLDR
 HAI
     WAZZUP 
-        I HAS A arr_emp ITZ COLLEKT BTW This array is empty
-        I HAS A arr ITZ COLLEKT 9 AN "Hi" AN 2.1 AN NOOB
+        I HAS A arr_emp ITZ COLLEKT 7 STUF  BTW This array is empty of size 7
+        I HAS A arr ITZ COLLEKT 5 STUF 9 AN "Hi" AN 2.1 AN NOOB B 
+        BTW This array is size 5 with initial values
     BUHBYE
 
     BTW Array Access

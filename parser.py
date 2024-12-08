@@ -235,36 +235,6 @@ class Parser:
             
             op1, op2 = self._cast(op1, "TROOF"), self._cast(op2, "TROOF")
             return self.bool_operations[operation](op1, op2)
-            
-            # Binary Operations
-            # match operation:
-            #     case "BOTH SAEM":
-            #         return op1 == op2
-            #     case "DIFFRINT":
-            #         return op1 != op2
-            #     case "SUM OF":
-            #         return op1 + op2
-            #     case "DIFF OF":
-            #         return op1 - op2
-            #     case "PRODUKT OF":
-            #         return op1 * op2
-            #     case "QUOSHUNT OF":
-            #         return op1 / op2
-            #     case "MOD OF":
-            #         return op1 % op2
-            #     case "BIGGR OF":
-            #         return max(op1, op2)
-            #     case "SMALLR OF":
-            #         return min(op1, op2)
-
-            # Boolean Operations
-            # match operation:
-            #     case "BOTH OF":
-            #         return op1 & op2
-            #     case "EITHER OF":
-            #         return op1 | op2
-            #     case "WON OF":
-            #         return op1 ^ op2
 
         if got := self.expect(Token.NUMBAR, required=False):
             return float(got) 
